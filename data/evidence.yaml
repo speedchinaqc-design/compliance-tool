@@ -1,0 +1,5 @@
+# 只记录 Dropbox 路径，方便页面按矩阵键对照。
+# 不要把 PDF、证书、付费标准原文写进 entries，更不要提交这些文件。
+schema_version: 1
+notice: entries 只保存 Dropbox 路径和编号。当前没有登记真实文件。规划书命名举例 UNI-8_EU_08METRO_CERT_TC1234_20260115_v1.pdf 不是真实证书，因此不列入 entries。
+entries: []

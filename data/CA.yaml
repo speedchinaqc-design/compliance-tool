@@ -1,0 +1,226 @@
+# 加拿大（CA）第一期市场数据
+# 法规名称、主管机构、强制性栏、认证路径、来源 URL 与《合规查询小工具规划书 v3》矩阵一致。
+# verified_date 为空：规划书没有逐格核实日期。不要填猜测日期。
+# 状态：强制性栏含 ✓ 为已核实；含 N/A 为 N/A；含「待核实」或三者都没有为待核实。
+# 付费标准原文、测试报告、证书不要放进本仓库。
+schema_version: 1
+market: CA
+market_name_zh: 加拿大
+dimensions:
+- code: '01'
+  dimension_code: 01CYBER
+  name_zh: 网络安全
+  applies_when:
+    attribute: has_wifi
+    equals: true
+    reason_if_not: 未勾选 Wi-Fi。本格按联网/无线产品编写；格子里若同时写了多项法规，规划书没有拆开，因此整格不进入适用清单。
+  entries:
+  - id: CA-01
+    regulation_name: 无针对联网产品的强制网络安全法
+    standard_numbers: []
+    authority: —
+    obligation: N/A（未发现）
+    certification_route: —
+    label_requirements: ''
+    source_url: https://ised-isde.canada.ca/
+    verified_date: null
+    status: N/A
+    status_basis: 强制性栏原文含「N/A」。规划书把 N/A 定义为核实后无针对性法规。
+- code: '02'
+  dimension_code: 02PACK
+  name_zh: 包装/EPR
+  applies_when:
+    always: true
+  entries:
+  - id: CA-02
+    regulation_name: 省级包装 EPR（安大略 O. Reg. 391/21、BC Recycling Regulation、魁北克）
+    standard_numbers:
+    - O. Reg. 391/21
+    authority: 各省
+    obligation: 按省强制
+    certification_route: 向省级 PRO 注册
+    label_requirements: ''
+    source_url: https://rpra.ca/
+    verified_date: null
+    status: 待核实
+    status_basis: 强制性栏没有 ✓、没有「待核实」、也没有「N/A」。不把未标记的格子写成已核实。
+- code: '03'
+  dimension_code: 03DATA
+  name_zh: 数据保护
+  applies_when:
+    always: true
+    conditional_on: processes_personal_data
+  entries:
+  - id: CA-03
+    regulation_name: PIPEDA
+    standard_numbers: []
+    authority: 加拿大隐私专员公署
+    obligation: 视情况
+    certification_route: 无认证
+    label_requirements: ''
+    source_url: https://www.priv.gc.ca/
+    verified_date: null
+    status: 待核实
+    status_basis: 强制性栏没有 ✓、没有「待核实」、也没有「N/A」。不把未标记的格子写成已核实。
+- code: '04'
+  dimension_code: 04SAFETY
+  name_zh: 电气安全
+  applies_when:
+    always: true
+  entries:
+  - id: CA-04
+    regulation_name: 各省电气法规（CSA C22.1）要求认证标志；CSA C22.2 No. 62368-1
+    standard_numbers:
+    - CSA C22.1
+    - CSA C22.2 No. 62368-1
+    authority: 各省电气安全局
+    obligation: 强制
+    certification_route: SCC 认可机构认证（cCSAus/cULus）
+    label_requirements: 认证标志
+    source_url: https://www.scc-ccn.ca/
+    verified_date: null
+    status: 待核实
+    status_basis: 强制性栏没有 ✓、没有「待核实」、也没有「N/A」。不把未标记的格子写成已核实。
+- code: '05'
+  dimension_code: 05EMC
+  name_zh: EMC
+  applies_when:
+    always: true
+  entries:
+  - id: CA-05
+    regulation_name: ICES-003
+    standard_numbers:
+    - ICES-003
+    authority: ISED
+    obligation: 强制
+    certification_route: SDoC + 标签声明
+    label_requirements: 标签声明
+    source_url: https://ised-isde.canada.ca/site/spectrum-management-telecommunications/en
+    verified_date: null
+    status: 待核实
+    status_basis: 强制性栏没有 ✓、没有「待核实」、也没有「N/A」。不把未标记的格子写成已核实。
+- code: '06'
+  dimension_code: 06RADIO
+  name_zh: 无线 2.4/5 GHz
+  applies_when:
+    attribute: has_wifi
+    equals: true
+    reason_if_not: 未勾选 Wi-Fi，无线要求不进入适用清单。
+  entries:
+  - id: CA-06
+    regulation_name: RSS-Gen、RSS-247（2.4 与 5 GHz LE-LAN）、RSS-102；5150–5250 仅室内，5600–5650 受限，DFS
+    standard_numbers:
+    - RSS-Gen
+    - RSS-247
+    - RSS-102
+    authority: ISED
+    obligation: 强制
+    certification_route: ISED 认证（IC ID）
+    label_requirements: ''
+    source_url: https://ised-isde.canada.ca/site/spectrum-management-telecommunications/en
+    verified_date: null
+    status: 待核实
+    status_basis: 强制性栏没有 ✓、没有「待核实」、也没有「N/A」。不把未标记的格子写成已核实。
+    attribute_notes:
+    - text: 规划书第一节写明样板产品另声明 IC RSS-102。RSS-102 已写在本格法规名中。
+    band_limits:
+      heading: 5 GHz 频段限制速览（规划书第四节）
+      columns:
+      - 5150–5250
+      - 5250–5350
+      - 5470–5725
+      - 5725–5850
+      values:
+      - 仅室内
+      - DFS
+      - DFS（5600–5650 受限）
+      - 可用
+      note: 第四节与矩阵格都原样保留，没有合并成一条新的频段结论。矩阵格里的频段文字见法规名称。
+- code: '07'
+  dimension_code: 07BATT
+  name_zh: 电池（纽扣）
+  applies_when:
+    attribute: has_battery
+    equals: true
+    reason_if_not: 未勾选纽扣电池，电池要求不进入适用清单。
+  entries:
+  - id: CA-07
+    regulation_name: CCPSA 附表 3（2026-09-17 起纳入含纽扣电池的非玩具消费品）；危害公告引用 ANSI/UL 4200A-2023；产品、包装、说明书须有英法双语警示；另有省级电池 EPR
+    standard_numbers:
+    - ANSI/UL 4200A-2023
+    authority: Health Canada（消费品安全）；各省
+    obligation: 强制风险 ✓（以 Health Canada 复函为准）
+    certification_route: 无预先认证；企业自负合规，备好 UL 4200A 报告与双语标签/说明书，供 HC 索取
+    label_requirements: 产品、包装、说明书须有英法双语警示
+    source_url: https://www.canada.ca/en/services/health/consultations/consultation-comment-period-danger-human-health-safety-assessment-products-containing-button-coin-batteries-packaging/document.html
+    verified_date: null
+    status: 已核实
+    status_basis: 强制性栏原文含 ✓。规划书把 ✓ 定义为本轮在官方或可靠来源核实。
+    attribute_notes:
+    - text: 当前选择是只通过需 B2B 账号登录的渠道销售。规划书建议不上架公开零售或无登录网店。复函同时写明：商用不自动排除；“仅限商用”标签本身不豁免；是否在 CCPSA 外由 Health Canada 逐案判断。
+      when:
+        b2b_login_only: true
+    - text: 当前未选择“仅 B2B 登录渠道”。复函写明：在对公众开放的商店或无需 B2B 账号登录的网店销售，即可合理预期个人可获得。
+      when:
+        b2b_login_only: false
+    - text: 当前选择电池焊接固定。加拿大这一格和复函要点没有把焊接写成豁免。规划书里讨论焊接豁免的是澳洲，不能套用到加拿大。
+      when:
+        battery_mount: soldered
+    - text: 当前选择电池可拆卸。规划书建议备好 ANSI/UL 4200A-2023 测试报告，以及产品、包装、说明书的英法双语警示。
+      when:
+        battery_mount: removable
+    - text: 电池安装方式仍是未知。规划书没有确认 UNI-8 的纽扣电池是否焊接；加拿大复函要点也没有按安装方式区分。
+      when:
+        battery_mount: unknown
+    additional_sources:
+    - role: 参考文件，不是矩阵格「官方来源」栏。复函本身非公开，不在仓库中。
+      title: Information for regulated parties on Health Canada's enforcement approach to the general prohibitions
+      publisher: Health Canada
+      url: https://www.canada.ca/en/health-canada/services/consumer-product-safety/legislation-guidelines/guidelines-policies/information-regulated-parties-enforcement-approach-general-prohibitions.html
+    health_canada_reply:
+      heading: 加拿大纽扣电池：Health Canada 复函要点
+      letter: Health Canada 致 Dan 的复函（编号 26-005366-600，2026-10-16 收文，非公开）。本仓库不存放该函。
+      conclusion: UNI-8 在加拿大按“强制风险”处理：商用不自动豁免，是否属 CCPSA 由 Health Canada 逐案判断。
+      points:
+      - topic: 法律依据
+        text: 2026-09-17 将含纽扣电池的非玩具消费品加入 CCPSA 附表 3，危害公告引用 ANSI/UL 4200A-2023；通过 CCPSA 第 7(a)、8(a) 段一般禁止条款执行
+      - topic: 过渡期
+        text: 无法定过渡期或旧货豁免；HC 先做合规宣传，但可随时按风险采取查封、命令、召回、起诉
+      - topic: 存货与在途
+        text: 同样适用于零售现有库存、运输中及海关处的货物
+      - topic: 企业责任
+        text: 企业自行确保产品解决评估中的危害；HC 可索取测试报告、标签、说明书
+      - topic: 适用范围
+        text: 商用不自动排除；在对公众开放的商店或无需 B2B 账号登录的网店销售，即可合理预期个人可获得；须在形态和功能上明显属商用才在 CCPSA 外；“仅限商用”标签本身不豁免；逐案判断
+      - topic: 未直接回答
+        text: 硬件不变时无需重测、仅做报告修订/加拿大差异页是否被接受；以提单（B/L）日期还是到港清关日期为准；英文版库存加贴双语标签后能否继续销售
+      actions:
+      - 只通过需要 B2B 账号登录的渠道销售，不上架公开零售或无登录网店。
+      - 备好 ANSI/UL 4200A-2023 测试报告，以及产品、包装、说明书的英法双语警示，归档到 Dropbox `02_产品/UNI-8/CA/07BATT/`。
+      - 评估 UNI-8 的形态与功能是否“明显属商用”（贸易结算计价贴标秤，须 Measurement Canada 型式批准），留存书面分析；结论仍由 HC 逐案决定。
+      - 未回答的问题可向原测试实验室和 HC（cps-spc@hc-sc.gc.ca）追问。
+- code: 08
+  dimension_code: 08METRO
+  name_zh: 法制计量
+  applies_when:
+    attribute: legal_for_trade
+    equals: true
+    reason_if_not: 未勾选贸易结算，法制计量不进入适用清单。
+  entries:
+  - id: CA-08
+    regulation_name: Weights and Measures Act；Specifications Relating to Non-automatic Weighing Devices；评价程序见《Laboratory manual for the evaluation of non-automatic weighing devices》（NAWDS_Lab Manual-eng_V1.2，Measurement Canada 发布 ✓）
+    standard_numbers:
+    - NAWDS_Lab Manual-eng_V1.2
+    authority: Measurement Canada
+    obligation: 强制 ✓
+    certification_route: 申请型式批准取得 NOA + 检定
+    label_requirements: ''
+    source_url: https://ised-isde.canada.ca/site/measurement-canada/en/type-approval/apply-type-approval-scales-or-scale-components
+    verified_date: null
+    status: 已核实
+    status_basis: 强制性栏原文含 ✓。规划书把 ✓ 定义为本轮在官方或可靠来源核实。
+    additional_sources:
+    - role: 参考文件，不是矩阵格「官方来源」栏
+      title: Laboratory manual for the evaluation of non-automatic weighing devices（NAWDS_Lab Manual-eng_V1.2）
+      publisher: Measurement Canada（ISED）
+      url: https://ised-isde.canada.ca/site/measurement-canada/en/laws-and-requirements/laboratory-manual-evaluation-non-automatic-weighing-devices/laboratory-manual-evaluation-non-automatic-weighing-devices

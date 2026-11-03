@@ -1,0 +1,125 @@
+# 样板产品与筛选属性。属性默认值对应规划书中的石田 UNI-8，电池安装方式保持「未知」。
+# 销售渠道是否仅为 B2B 登录、是否处理个人数据，规划书没有写成产品事实，默认不勾选。
+schema_version: 1
+sample_product:
+  id: UNI-8
+  name_zh: 石田 UNI-8
+  name_en: ISHIDA UNI-8
+  kind: 非自动衡器，计价贴标
+  plan_wording: 石田 UNI-8：非自动衡器，计价贴标，15/30 kg 双分度，推断 III 级；100–240 V AC；纽扣电池；Wi-Fi 2.4/5 GHz、以太网、USB；嵌入式联网软件；热敏打印
+  capacity: 15/30 kg 双分度
+  accuracy_class: 推断 III 级
+  accuracy_class_note: 规划书原文是「推断 III 级」，不是已经确认的型式批准等级。
+  power: 100–240 V AC
+  battery: 纽扣电池
+  radio: Wi-Fi 2.4/5 GHz
+  interfaces:
+  - 以太网
+  - USB
+  software: 嵌入式联网软件
+  printer: 热敏打印
+  fcc_wording: 已确认 Part 15B Class A；另声明 IC RSS-102
+market_order:
+- EU
+- CA
+- US
+attributes:
+- id: has_wifi
+  label: 具有 Wi-Fi（2.4 GHz 与 5 GHz）
+  type: boolean
+  default: true
+  help: 样板产品有 Wi-Fi。去掉勾选后，无线和网络安全不进入适用清单。
+- id: has_battery
+  label: 具有纽扣电池
+  type: boolean
+  default: true
+  help: 样板产品有纽扣电池。去掉勾选后，电池行不进入适用清单。
+- id: battery_mount
+  label: 电池安装方式
+  type: enum
+  default: unknown
+  options:
+  - id: unknown
+    label: 未知（计划书未确认）
+  - id: soldered
+    label: 焊接固定
+  - id: removable
+    label: 可拆卸
+  help: 规划书没有确认 UNI-8 的纽扣电池是否焊接。此选项只改提示，不把任何市场改成豁免。
+  enabled_when:
+    attribute: has_battery
+    equals: true
+- id: legal_for_trade
+  label: 用于贸易结算（法制计量）
+  type: boolean
+  default: true
+  help: 样板是计价贴标秤。去掉勾选后，法制计量不进入适用清单。准确度等级在规划书中是「推断 III 级」。
+- id: b2b_login_only
+  label: 仅通过需 B2B 账号登录的渠道销售
+  type: boolean
+  default: false
+  help: 用来对照加拿大电池复函和美国包装「B2B 适用性待核实」。不自动把要求标成不适用。
+- id: processes_personal_data
+  label: 处理个人数据
+  type: boolean
+  default: false
+  help: 数据保护在规划书里是「视情况」。不勾选时仍然列出，并标明当前未声明会处理个人数据。
+knowledge_base:
+  root: /合规知识库
+  folder_template: /合规知识库/02_产品/{model}/{market}/{dimension_code}/
+  filename_template: '{model}_{market}_{dimension_code}_{type}_{number}_{issue_date}_{version}.pdf'
+  filename_example: UNI-8_EU_08METRO_CERT_TC1234_20260115_v1.pdf
+  filename_example_note: 规划书里的命名举例，不是真实证书。
+  matrix_key_template: '{market}-{dimension_number}'
+  matrix_key_example: CA-08
+  model: UNI-8
+  type_codes:
+  - code: STD
+    meaning: 标准
+  - code: RPT
+    meaning: 测试报告
+  - code: CERT
+    meaning: 型式批准/认证证书
+  - code: DOC
+    meaning: 符合性声明
+  - code: LBL
+    meaning: 标签
+  - code: CORR
+    meaning: 往来函件
+  dimension_codes:
+  - code: '01'
+    id: 01CYBER
+    name_zh: 网络安全
+  - code: '02'
+    id: 02PACK
+    name_zh: 包装/EPR
+  - code: '03'
+    id: 03DATA
+    name_zh: 数据保护
+  - code: '04'
+    id: 04SAFETY
+    name_zh: 电气安全
+  - code: '05'
+    id: 05EMC
+    name_zh: EMC
+  - code: '06'
+    id: 06RADIO
+    name_zh: 无线 2.4/5 GHz
+  - code: '07'
+    id: 07BATT
+    name_zh: 电池（纽扣）
+  - code: 08
+    id: 08METRO
+    name_zh: 法制计量
+  index_columns:
+  - 产品 / 型号
+  - 市场
+  - 维度
+  - 标准号 / 版本
+  - 报告号 / 证书号
+  - 实验室 / 机构
+  - 签发日期 / 到期日期
+  - 状态
+  - Dropbox 路径
+  - 矩阵键
+  privacy_note: 付费标准原文（EN、IEC、UL、CSA 等）只放在 Dropbox 私有文件夹，不建共享链接，不提交到本仓库。测试报告和证书同样不入库。页面只显示路径和命名规则。

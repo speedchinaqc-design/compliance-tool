@@ -1,0 +1,240 @@
+{
+  "algorithm": "sha256-normalized-visible-text-v1",
+  "normalize": "去掉 script/style/noscript 和 HTML 注释，去掉标签，合并空白后做 UTF-8 SHA-256。超过 4000000 字节的响应在解码前截断。",
+  "sources": {
+    "https://calrecycle.ca.gov/packaging/packaging-epr/": {
+      "hash": "3662db325bd442f653c9538d0709dbb64a215beb81551e055365dac2e26e3c80",
+      "entries": [
+        "US-02"
+      ],
+      "fetched_at": "2026-11-03T09:13:37Z",
+      "error": null,
+      "last_status": 200,
+      "last_error": null,
+      "final_url": "https://calrecycle.ca.gov/packaging/packaging-epr/"
+    },
+    "https://eur-lex.europa.eu/eli/dir/2014/31/oj": {
+      "hash": null,
+      "entries": [
+        "EU-08"
+      ],
+      "fetched_at": "2026-11-03T09:20:00Z",
+      "error": "站点返回了浏览器校验页，脚本读不到法规正文",
+      "last_status": 202,
+      "last_error": "站点返回了浏览器校验页，脚本读不到法规正文",
+      "final_url": "https://eur-lex.europa.eu/eli/dir/2014/31/oj"
+    },
+    "https://eur-lex.europa.eu/eli/dir/2014/53/oj": {
+      "hash": null,
+      "entries": [
+        "EU-04",
+        "EU-05"
+      ],
+      "fetched_at": "2026-11-03T09:20:00Z",
+      "error": "站点返回了浏览器校验页，脚本读不到法规正文",
+      "last_status": 202,
+      "last_error": "站点返回了浏览器校验页，脚本读不到法规正文",
+      "final_url": "https://eur-lex.europa.eu/eli/dir/2014/53/oj"
+    },
+    "https://eur-lex.europa.eu/eli/reg/2016/679/oj": {
+      "hash": null,
+      "entries": [
+        "EU-03"
+      ],
+      "fetched_at": "2026-11-03T09:20:00Z",
+      "error": "站点返回了浏览器校验页，脚本读不到法规正文",
+      "last_status": 202,
+      "last_error": "站点返回了浏览器校验页，脚本读不到法规正文",
+      "final_url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj"
+    },
+    "https://eur-lex.europa.eu/eli/reg/2025/40/oj": {
+      "hash": null,
+      "entries": [
+        "EU-02"
+      ],
+      "fetched_at": "2026-11-03T09:20:00Z",
+      "error": "站点返回了浏览器校验页，脚本读不到法规正文",
+      "last_status": 202,
+      "last_error": "站点返回了浏览器校验页，脚本读不到法规正文",
+      "final_url": "https://eur-lex.europa.eu/eli/reg/2025/40/oj"
+    },
+    "https://eur-lex.europa.eu/eli/reg_del/2022/30/oj": {
+      "hash": null,
+      "entries": [
+        "EU-01"
+      ],
+      "fetched_at": "2026-11-03T09:20:00Z",
+      "error": "站点返回了浏览器校验页，脚本读不到法规正文",
+      "last_status": 202,
+      "last_error": "站点返回了浏览器校验页，脚本读不到法规正文",
+      "final_url": "https://eur-lex.europa.eu/eli/reg_del/2022/30/oj"
+    },
+    "https://ised-isde.canada.ca/": {
+      "hash": "5bdeb59608791e6e12e1d2ab4b6e603de6111d31e455d0c05754bebbd3119a83",
+      "entries": [
+        "CA-01"
+      ],
+      "fetched_at": "2026-11-03T09:13:37Z",
+      "error": null,
+      "last_status": 200,
+      "last_error": null,
+      "final_url": "https://ised-isde.canada.ca:443/site/ised/"
+    },
+    "https://ised-isde.canada.ca/site/measurement-canada/en/type-approval/apply-type-approval-scales-or-scale-components": {
+      "hash": "de36ff6c8fc9316a5dba3dfbb61dc8cf3bb56c33ea07a752b72d72448e81ab55",
+      "entries": [
+        "CA-08"
+      ],
+      "fetched_at": "2026-11-03T09:13:37Z",
+      "error": null,
+      "last_status": 200,
+      "last_error": null,
+      "final_url": "https://ised-isde.canada.ca/site/measurement-canada/en/type-approval/apply-type-approval-scales-or-scale-components"
+    },
+    "https://ised-isde.canada.ca/site/spectrum-management-telecommunications/en": {
+      "hash": "6696c0be4bc0ecb5dd36ca6cebfe700bd2e65cab3b9b996b41b4fa425fcd978a",
+      "entries": [
+        "CA-05",
+        "CA-06"
+      ],
+      "fetched_at": "2026-11-03T09:13:37Z",
+      "error": null,
+      "last_status": 200,
+      "last_error": null,
+      "final_url": "https://ised-isde.canada.ca/site/spectrum-management-telecommunications/en"
+    },
+    "https://oag.ca.gov/privacy/ccpa": {
+      "hash": "a05d593e1b81b7298075a034917d5e55fba6688742aaa563d9e3d034a97e81fc",
+      "entries": [
+        "US-03"
+      ],
+      "fetched_at": "2026-11-03T09:13:37Z",
+      "error": null,
+      "last_status": 200,
+      "last_error": null,
+      "final_url": "https://oag.ca.gov/privacy/ccpa"
+    },
+    "https://rpra.ca/": {
+      "hash": "bd2cdcdfd3c5b7a1cb58b343ca3e6c4c54dfc55be1d9055780480669f9fd9ace",
+      "entries": [
+        "CA-02"
+      ],
+      "fetched_at": "2026-11-03T09:13:37Z",
+      "error": null,
+      "last_status": 200,
+      "last_error": null,
+      "final_url": "https://rpra.ca/"
+    },
+    "https://single-market-economy.ec.europa.eu/single-market/goods/european-standards/harmonised-standards/eu-battery-regulation_en": {
+      "hash": "347d78f6c01a1c55508729f4ed124cf78d0ac96dfa907ec2e534e6ac3e073e3f",
+      "entries": [
+        "EU-07"
+      ],
+      "fetched_at": "2026-11-03T09:13:37Z",
+      "error": null,
+      "last_status": 200,
+      "last_error": null,
+      "final_url": "https://single-market-economy.ec.europa.eu/single-market/goods/european-standards/harmonised-standards/eu-battery-regulation_en"
+    },
+    "https://www.canada.ca/en/services/health/consultations/consultation-comment-period-danger-human-health-safety-assessment-products-containing-button-coin-batteries-packaging/document.html": {
+      "hash": "587831b4fd4859dcad9a36fb4a6f2a70c80c7d82551686a87932c3f38c885bdd",
+      "entries": [
+        "CA-07"
+      ],
+      "fetched_at": "2026-11-03T09:13:37Z",
+      "error": "The read operation timed out",
+      "last_status": null,
+      "last_error": "The read operation timed out",
+      "final_url": null
+    },
+    "https://www.cpsc.gov/Business--Manufacturing/Business-Education/Business-Guidance/Reeses-Law": {
+      "hash": null,
+      "entries": [
+        "US-07"
+      ],
+      "fetched_at": "2026-11-03T09:20:00Z",
+      "error": "HTTP Error 403: Forbidden",
+      "last_status": 403,
+      "last_error": "HTTP Error 403: Forbidden",
+      "final_url": "https://www.cpsc.gov/Business--Manufacturing/Business-Education/Business-Guidance/Reeses-Law"
+    },
+    "https://www.ecfr.gov/current/title-47/chapter-I/subchapter-A/part-15": {
+      "hash": "c8bc0acad7aa957d89e03e1730a6d5a7b20580ea89313eb41d8b7a1996346c8f",
+      "entries": [
+        "US-05",
+        "US-06"
+      ],
+      "fetched_at": "2026-11-03T09:13:37Z",
+      "error": null,
+      "last_status": 200,
+      "last_error": null,
+      "final_url": "https://www.ecfr.gov/current/title-47/chapter-I/subchapter-A/part-15"
+    },
+    "https://www.etsi.org/": {
+      "hash": "4b427fb08589cb19e43713182119fab9eeb97259ccda8ddd73dd687a1e50285a",
+      "entries": [
+        "EU-06"
+      ],
+      "fetched_at": "2026-11-03T09:13:37Z",
+      "error": null,
+      "last_status": 200,
+      "last_error": null,
+      "final_url": "https://www.etsi.org/"
+    },
+    "https://www.fcc.gov/CyberTrustMark": {
+      "hash": null,
+      "entries": [
+        "US-01"
+      ],
+      "fetched_at": "2026-11-03T09:20:00Z",
+      "error": "HTTP Error 403: Forbidden",
+      "last_status": 403,
+      "last_error": "HTTP Error 403: Forbidden",
+      "final_url": "https://www.fcc.gov/CyberTrustMark"
+    },
+    "https://www.ncwm.com/ntep": {
+      "hash": "789bcd49b8f0937b3a2a27813c7d692ae935f0ac18caf4dbb75d7ae71645f909",
+      "entries": [
+        "US-08"
+      ],
+      "fetched_at": "2026-11-03T09:13:37Z",
+      "error": null,
+      "last_status": 200,
+      "last_error": null,
+      "final_url": "https://www.ncwm.com/ntep-about"
+    },
+    "https://www.osha.gov/nationally-recognized-testing-laboratory-program": {
+      "hash": "7dc490a84a78cc9d8c7413573ffc61f94899ecd6c234b44b5eda6dc218378412",
+      "entries": [
+        "US-04"
+      ],
+      "fetched_at": "2026-11-03T09:13:37Z",
+      "error": null,
+      "last_status": 200,
+      "last_error": null,
+      "final_url": "https://www.osha.gov/nationally-recognized-testing-laboratory-program"
+    },
+    "https://www.priv.gc.ca/": {
+      "hash": "a2308b71f601183b43e009222cda5fcf3ac4e24de0cc75f344b52e3cdec1e933",
+      "entries": [
+        "CA-03"
+      ],
+      "fetched_at": "2026-11-03T09:20:00Z",
+      "error": null,
+      "last_status": 200,
+      "last_error": null,
+      "final_url": "https://www.priv.gc.ca/"
+    },
+    "https://www.scc-ccn.ca/": {
+      "hash": null,
+      "entries": [
+        "CA-04"
+      ],
+      "fetched_at": "2026-11-03T09:20:00Z",
+      "error": "HTTP Error 403: Forbidden",
+      "last_status": 403,
+      "last_error": "HTTP Error 403: Forbidden",
+      "final_url": "https://www.scc-ccn.ca/"
+    }
+  }
+}

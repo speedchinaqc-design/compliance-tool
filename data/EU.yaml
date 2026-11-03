@@ -1,0 +1,194 @@
+# 欧盟（EU）第一期市场数据
+# 法规名称、主管机构、强制性栏、认证路径、来源 URL 与《合规查询小工具规划书 v3》矩阵一致。
+# verified_date 为空：规划书没有逐格核实日期。不要填猜测日期。
+# 状态：强制性栏含 ✓ 为已核实；含 N/A 为 N/A；含「待核实」或三者都没有为待核实。
+# 付费标准原文、测试报告、证书不要放进本仓库。
+schema_version: 1
+market: EU
+market_name_zh: 欧盟
+dimensions:
+- code: '01'
+  dimension_code: 01CYBER
+  name_zh: 网络安全
+  applies_when:
+    attribute: has_wifi
+    equals: true
+    reason_if_not: 未勾选 Wi-Fi。本格按联网/无线产品编写；格子里若同时写了多项法规，规划书没有拆开，因此整格不进入适用清单。
+  entries:
+  - id: EU-01
+    regulation_name: RED 授权法规 (EU) 2022/30（2025-08-01 起，EN 18031-1）；CRA (EU) 2024/2847（报告义务 2026-09-11，全面 2027-12-11）
+    standard_numbers:
+    - EN 18031-1
+    authority: 欧委会 / 公告机构
+    obligation: 强制 ✓
+    certification_route: 自我声明 DoC；EN 18031 带限制条款时须 NB
+    label_requirements: ''
+    source_url: https://eur-lex.europa.eu/eli/reg_del/2022/30/oj
+    verified_date: null
+    status: 已核实
+    status_basis: 强制性栏原文含 ✓。规划书把 ✓ 定义为本轮在官方或可靠来源核实。
+- code: '02'
+  dimension_code: 02PACK
+  name_zh: 包装/EPR
+  applies_when:
+    always: true
+  entries:
+  - id: EU-02
+    regulation_name: PPWR (EU) 2025/40（2026-08-12 起适用）+ 各成员国包装 EPR 注册
+    standard_numbers: []
+    authority: 欧委会 / 成员国
+    obligation: 强制 ✓
+    certification_route: 成员国 EPR 注册、标识、可回收设计
+    label_requirements: 标识、可回收设计
+    source_url: https://eur-lex.europa.eu/eli/reg/2025/40/oj
+    verified_date: null
+    status: 已核实
+    status_basis: 强制性栏原文含 ✓。规划书把 ✓ 定义为本轮在官方或可靠来源核实。
+- code: '03'
+  dimension_code: 03DATA
+  name_zh: 数据保护
+  applies_when:
+    always: true
+    conditional_on: processes_personal_data
+  entries:
+  - id: EU-03
+    regulation_name: GDPR (EU) 2016/679
+    standard_numbers: []
+    authority: 各国数据保护机构
+    obligation: 视情况（处理个人数据时）
+    certification_route: 无认证；合规文档
+    label_requirements: ''
+    source_url: https://eur-lex.europa.eu/eli/reg/2016/679/oj
+    verified_date: null
+    status: 待核实
+    status_basis: 强制性栏没有 ✓、没有「待核实」、也没有「N/A」。不把未标记的格子写成已核实。
+- code: '04'
+  dimension_code: 04SAFETY
+  name_zh: 电气安全
+  applies_when:
+    always: true
+  entries:
+  - id: EU-04
+    regulation_name: RED 3.1(a)（引用 LVD 安全目标）；EN IEC 62368-1
+    standard_numbers:
+    - EN IEC 62368-1
+    authority: 市场监管机构
+    obligation: 强制 ✓
+    certification_route: DoC + 技术文件
+    label_requirements: ''
+    source_url: https://eur-lex.europa.eu/eli/dir/2014/53/oj
+    verified_date: null
+    status: 已核实
+    status_basis: 强制性栏原文含 ✓。规划书把 ✓ 定义为本轮在官方或可靠来源核实。
+    attribute_notes:
+    - text: 这一格按 RED 编写。规划书没有写去掉 Wi-Fi 之后应改用哪一项欧盟安全指令。
+      when:
+        has_wifi: false
+- code: '05'
+  dimension_code: 05EMC
+  name_zh: EMC
+  applies_when:
+    always: true
+  entries:
+  - id: EU-05
+    regulation_name: RED 3.1(b)；EN 301 489-1/-17、EN 55032/55035
+    standard_numbers:
+    - EN 301 489-1/-17
+    - EN 55032/55035
+    authority: 市场监管机构
+    obligation: 强制 ✓
+    certification_route: DoC
+    label_requirements: ''
+    source_url: https://eur-lex.europa.eu/eli/dir/2014/53/oj
+    verified_date: null
+    status: 已核实
+    status_basis: 强制性栏原文含 ✓。规划书把 ✓ 定义为本轮在官方或可靠来源核实。
+    attribute_notes:
+    - text: 这一格按 RED 编写。规划书没有写去掉 Wi-Fi 之后应改用哪一项欧盟 EMC 指令。
+      when:
+        has_wifi: false
+- code: '06'
+  dimension_code: 06RADIO
+  name_zh: 无线 2.4/5 GHz
+  applies_when:
+    attribute: has_wifi
+    equals: true
+    reason_if_not: 未勾选 Wi-Fi，无线要求不进入适用清单。
+  entries:
+  - id: EU-06
+    regulation_name: RED 3.2；EN 300 328、EN 301 893。5150–5350 仅室内，5250–5350/5470–5725 须 DFS/TPC
+    standard_numbers:
+    - EN 300 328
+    - EN 301 893
+    authority: 市场监管机构
+    obligation: 强制 ✓
+    certification_route: DoC
+    label_requirements: ''
+    source_url: https://www.etsi.org/
+    verified_date: null
+    status: 已核实
+    status_basis: 强制性栏原文含 ✓。规划书把 ✓ 定义为本轮在官方或可靠来源核实。
+    band_limits:
+      heading: 5 GHz 频段限制速览（规划书第四节）
+      columns:
+      - 5150–5250
+      - 5250–5350
+      - 5470–5725
+      - 5725–5850
+      values:
+      - 仅室内
+      - 仅室内 + DFS
+      - DFS/TPC
+      - 不用于 WLAN
+      note: 第四节与矩阵格都原样保留，没有合并成一条新的频段结论。矩阵格里的频段文字见法规名称。
+- code: '07'
+  dimension_code: 07BATT
+  name_zh: 电池（纽扣）
+  applies_when:
+    attribute: has_battery
+    equals: true
+    reason_if_not: 未勾选纽扣电池，电池要求不进入适用清单。
+  entries:
+  - id: EU-07
+    regulation_name: 电池法规 (EU) 2023/1542：标识、可拆卸（第 11 条，2027-02-18）、生产者 EPR
+    standard_numbers: []
+    authority: 欧委会 / 成员国
+    obligation: 强制 ✓
+    certification_route: EPR 注册 + 标识
+    label_requirements: 标识
+    source_url: https://single-market-economy.ec.europa.eu/single-market/goods/european-standards/harmonised-standards/eu-battery-regulation_en
+    verified_date: null
+    status: 已核实
+    status_basis: 强制性栏原文含 ✓。规划书把 ✓ 定义为本轮在官方或可靠来源核实。
+    attribute_notes:
+    - text: 法规名写有可拆卸（第 11 条，2027-02-18）。规划书没有写焊接固定就可以不适用该条。
+      when:
+        battery_mount: soldered
+    - text: 法规名写有可拆卸（第 11 条，2027-02-18）。
+      when:
+        battery_mount: removable
+    - text: 法规名写有可拆卸（第 11 条，2027-02-18）。UNI-8 的纽扣电池是否可拆，规划书未确认。
+      when:
+        battery_mount: unknown
+- code: 08
+  dimension_code: 08METRO
+  name_zh: 法制计量
+  applies_when:
+    attribute: legal_for_trade
+    equals: true
+    reason_if_not: 未勾选贸易结算，法制计量不进入适用清单。
+  entries:
+  - id: EU-08
+    regulation_name: NAWI 2014/31/EU；EN 45501 / OIML R76；WELMEC 2、7.2
+    standard_numbers:
+    - EN 45501
+    - OIML R76
+    - WELMEC 2、7.2
+    authority: 公告机构
+    obligation: 强制 ✓
+    certification_route: 模块 B（EU-TEC）+ D/F；CE + M + NB 号
+    label_requirements: CE + M + NB 号
+    source_url: https://eur-lex.europa.eu/eli/dir/2014/31/oj
+    verified_date: null
+    status: 已核实
+    status_basis: 强制性栏原文含 ✓。规划书把 ✓ 定义为本轮在官方或可靠来源核实。
