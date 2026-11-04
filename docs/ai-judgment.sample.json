@@ -1,0 +1,34 @@
+{
+  "note": "格式示例，不是判断结果。本工具不调用 AI。",
+  "judgments": [
+    {
+      "requirement": "CA-07",
+      "market": "CA",
+      "module": "电池",
+      "layer1": {
+        "regulation": "待确认：法规名称",
+        "official_link": "https://www.canada.ca/en/services/health/consultations/consultation-comment-period-danger-human-health-safety-assessment-products-containing-button-coin-batteries-packaging/document.html"
+      },
+      "layer2": {
+        "standard": "ANSI/UL 4200A-2023",
+        "dropbox_path": "/合规知识库/02_产品/UNI-8/CA/07BATT/",
+        "link": ""
+      },
+      "conclusion": "待确认。复函 26-005366-600：商用不自动豁免。",
+      "source": "格式示例，不是 Dan Bot 的输出",
+      "status": "待核实"
+    }
+  ],
+  "comparisons": [
+    {
+      "requirement": "CA-07",
+      "market": "CA",
+      "module": "电池",
+      "status": "差距",
+      "reason": "示例/待确认：不是已核实的差距结论。",
+      "source": "示例",
+      "dropbox_path": "/合规知识库/02_产品/UNI-8/CA/07BATT/",
+      "page": "待确认"
+    }
+  ]
+}

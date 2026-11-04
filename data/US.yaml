@@ -1,0 +1,225 @@
+# 美国（US）第一期市场数据
+# 法规名称、主管机构、强制性栏、认证路径、来源 URL 与《合规查询小工具规划书 v3》矩阵一致。
+# verified_date 为空：规划书没有逐格核实日期。不要填猜测日期。
+# 状态：强制性栏含 ✓ 为已核实；含 N/A 为 N/A；含「待核实」或三者都没有为待核实。
+# 付费标准原文、测试报告、证书不要放进本仓库。
+schema_version: 1
+market: US
+market_name_zh: 美国
+dimensions:
+- code: '01'
+  dimension_code: 01CYBER
+  name_zh: 网络安全
+  applies_when:
+    attribute: has_wifi
+    equals: true
+    reason_if_not: 未勾选 Wi-Fi。本格按联网/无线产品编写；格子里若同时写了多项法规，规划书没有拆开，因此整格不进入适用清单。
+  entries:
+  - id: US-01
+    modules:
+    - "CRA"
+    evidence_types:
+    - "合规文档"
+    regulation_name: 联邦：无强制；U.S. Cyber Trust Mark 自愿，截至 2026-11 尚未开放申请。加州 SB-327 联网设备合理安全（唯一密码）
+    standard_numbers: []
+    authority: FCC / 加州
+    obligation: 联邦自愿 ✓；加州强制
+    certification_route: 自我符合
+    label_requirements: ''
+    source_url: https://www.fcc.gov/CyberTrustMark
+    verified_date: null
+    status: 已核实
+    status_basis: 强制性栏原文含 ✓。规划书把 ✓ 定义为本轮在官方或可靠来源核实。
+- code: '02'
+  dimension_code: 02PACK
+  name_zh: 包装/EPR
+  applies_when:
+    always: true
+  entries:
+  - id: US-02
+    modules:
+    - "电子产品"
+    evidence_types:
+    - "注册文件"
+    regulation_name: 无联邦法；州包装 EPR（CA SB 54、OR、CO、ME、MN、MD、WA）
+    standard_numbers: []
+    authority: 各州
+    obligation: 按州强制（B2B 适用性待核实）
+    certification_route: 向州 PRO 注册
+    label_requirements: ''
+    source_url: https://calrecycle.ca.gov/packaging/packaging-epr/
+    verified_date: null
+    status: 待核实
+    status_basis: 强制性栏原文含「待核实」。
+    attribute_notes:
+    - text: 强制性栏写明 B2B 适用性待核实。当前是否只通过 B2B 登录渠道销售，都不改变这条的待核实状态。
+- code: '03'
+  dimension_code: 03DATA
+  name_zh: 数据保护
+  applies_when:
+    always: true
+    conditional_on: processes_personal_data
+  entries:
+  - id: US-03
+    modules:
+    - "CRA"
+    evidence_types:
+    - "合规文档"
+    regulation_name: 无联邦通用法；州隐私法（如 CCPA/CPRA）
+    standard_numbers: []
+    authority: 各州 AG
+    obligation: 视情况
+    certification_route: 无认证
+    label_requirements: ''
+    source_url: https://oag.ca.gov/privacy/ccpa
+    verified_date: null
+    status: 待核实
+    status_basis: 强制性栏没有 ✓、没有「待核实」、也没有「N/A」。不把未标记的格子写成已核实。
+- code: '04'
+  dimension_code: 04SAFETY
+  name_zh: 电气安全
+  applies_when:
+    always: true
+  entries:
+  - id: US-04
+    modules:
+    - "电子产品"
+    evidence_types:
+    - "证书"
+    - "测试报告"
+    regulation_name: OSHA 29 CFR 1910.303 要求工作场所设备经 NRTL 认证；UL 62368-1
+    standard_numbers:
+    - UL 62368-1
+    authority: OSHA
+    obligation: 实际强制 ✓
+    certification_route: NRTL（UL/ETL/CSA）认证
+    label_requirements: ''
+    source_url: https://www.osha.gov/nationally-recognized-testing-laboratory-program
+    verified_date: null
+    status: 已核实
+    status_basis: 强制性栏原文含 ✓。规划书把 ✓ 定义为本轮在官方或可靠来源核实。
+- code: '05'
+  dimension_code: 05EMC
+  name_zh: EMC
+  applies_when:
+    always: true
+  entries:
+  - id: US-05
+    modules:
+    - "电子产品"
+    - "FCC/ISED"
+    evidence_types:
+    - "DoC"
+    - "测试报告"
+    regulation_name: 47 CFR Part 15B（A/B 类数字设备）
+    standard_numbers:
+    - 47 CFR Part 15B
+    authority: FCC
+    obligation: 强制 ✓
+    certification_route: SDoC（或随无线一起认证）
+    label_requirements: ''
+    source_url: https://www.ecfr.gov/current/title-47/chapter-I/subchapter-A/part-15
+    verified_date: null
+    status: 已核实
+    status_basis: 强制性栏原文含 ✓。规划书把 ✓ 定义为本轮在官方或可靠来源核实。
+    attribute_notes:
+    - text: 样板产品在规划书第一节写明已确认 Part 15B Class A。本格法规名仍是 A/B 类数字设备，没有另写一条只针对 Class A 的新要求。
+- code: '06'
+  dimension_code: 06RADIO
+  name_zh: 无线 2.4/5 GHz
+  applies_when:
+    attribute: has_wifi
+    equals: true
+    reason_if_not: 未勾选 Wi-Fi，无线要求不进入适用清单。
+  entries:
+  - id: US-06
+    modules:
+    - "FCC/ISED"
+    evidence_types:
+    - "证书"
+    - "测试报告"
+    regulation_name: Part 15.247（2.4 GHz）、15.407（U-NII）；U-NII-2A/2C 须 DFS；5850–5895 另有规定
+    standard_numbers:
+    - Part 15.247
+    - '15.407'
+    authority: FCC / TCB
+    obligation: 强制 ✓
+    certification_route: TCB 认证取得 FCC ID；2028-12-01 起禁用非互认国实验室
+    label_requirements: ''
+    source_url: https://www.ecfr.gov/current/title-47/chapter-I/subchapter-A/part-15
+    verified_date: null
+    status: 已核实
+    status_basis: 强制性栏原文含 ✓。规划书把 ✓ 定义为本轮在官方或可靠来源核实。
+    band_limits:
+      heading: 5 GHz 频段限制速览（规划书第四节）
+      columns:
+      - 5150–5250
+      - 5250–5350
+      - 5470–5725
+      - 5725–5850
+      values:
+      - 可用
+      - DFS
+      - DFS
+      - 可用
+      note: 第四节与矩阵格都原样保留，没有合并成一条新的频段结论。矩阵格里的频段文字见法规名称。第四节该行写的是「美国 / 墨西哥」，这里只放到美国，本期数据没有墨西哥。
+      row_label_in_plan: 美国 / 墨西哥
+- code: '07'
+  dimension_code: 07BATT
+  name_zh: 电池（纽扣）
+  applies_when:
+    attribute: has_battery
+    equals: true
+    reason_if_not: 未勾选纽扣电池，电池要求不进入适用清单。
+  entries:
+  - id: US-07
+    modules:
+    - "电池"
+    evidence_types:
+    - "测试报告"
+    - "标签照片"
+    regulation_name: Reese's Law 16 CFR 1263（消费品，商用秤可能不适用）；加州高氯酸盐锂纽扣电池标识
+    standard_numbers:
+    - 16 CFR 1263
+    authority: CPSC / 加州 DTSC
+    obligation: 待核实（适用范围）
+    certification_route: 标识 + 测试
+    label_requirements: 加州高氯酸盐锂纽扣电池标识
+    source_url: https://www.cpsc.gov/Business--Manufacturing/Business-Education/Business-Guidance/Reeses-Law
+    verified_date: null
+    status: 待核实
+    status_basis: 强制性栏原文含「待核实」。
+    attribute_notes:
+    - text: 强制性栏原文是「待核实（适用范围）」。法规名写明 Reese's Law 针对消费品，商用秤可能不适用。安装方式不改变这条状态。
+- code: 08
+  dimension_code: 08METRO
+  name_zh: 法制计量
+  applies_when:
+    attribute: legal_for_trade
+    equals: true
+    reason_if_not: 未勾选贸易结算，法制计量不进入适用清单。
+  entries:
+  - id: US-08
+    modules:
+    - "计量"
+    evidence_types:
+    - "证书"
+    regulation_name: NIST HB44 §2.20；NCWM Publication 14；HB130；参考 Measurement Canada《Laboratory manual for the evaluation of non-automatic weighing devices》（NAWDS Lab Manual，美国 NTEP 实验室亦使用）
+    standard_numbers:
+    - NIST HB44 §2.20
+    - NCWM Publication 14
+    - HB130
+    - NAWDS Lab Manual
+    authority: NCWM/NTEP；各州计量局
+    obligation: 强制 ✓（各州采纳）
+    certification_route: NTEP 型式评价取得 CC 证书
+    label_requirements: ''
+    source_url: https://www.ncwm.com/ntep
+    verified_date: null
+    status: 已核实
+    status_basis: 强制性栏原文含 ✓。规划书把 ✓ 定义为本轮在官方或可靠来源核实。
+    additional_sources:
+    - role: 参考文件，不是矩阵格「官方来源」栏
+      title: Laboratory manual for the evaluation of non-automatic weighing devices（NAWDS_Lab Manual-eng_V1.2）
+      publisher: Measurement Canada（ISED）
+      url: https://ised-isde.canada.ca/site/measurement-canada/en/laws-and-requirements/laboratory-manual-evaluation-non-automatic-weighing-devices/laboratory-manual-evaluation-non-automatic-weighing-devices

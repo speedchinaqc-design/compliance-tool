@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.compliance-tool/schema/product.schema.json",
+  "title": "样板产品与属性",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "sample_product", "market_order", "attributes", "knowledge_base"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "sample_product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name_zh",
+        "name_en",
+        "kind",
+        "plan_wording",
+        "capacity",
+        "accuracy_class",
+        "accuracy_class_note",
+        "power",
+        "battery",
+        "radio",
+        "interfaces",
+        "software",
+        "printer",
+        "fcc_wording"
+      ],
+      "properties": {
+        "id": { "const": "UNI-8" },
+        "name_zh": { "type": "string" },
+        "name_en": { "type": "string" },
+        "kind": { "type": "string" },
+        "plan_wording": { "type": "string" },
+        "capacity": { "type": "string" },
+        "accuracy_class": { "type": "string" },
+        "accuracy_class_note": { "type": "string" },
+        "power": { "type": "string" },
+        "battery": { "type": "string" },
+        "radio": { "type": "string" },
+        "interfaces": { "type": "array", "items": { "type": "string" } },
+        "software": { "type": "string" },
+        "printer": { "type": "string" },
+        "fcc_wording": { "type": "string" }
+      }
+    },
+    "market_order": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "enum": ["EU", "CA", "US"] }
+    },
+    "attributes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/attribute" }
+    },
+    "knowledge_base": { "$ref": "#/$defs/knowledgeBase" }
+  },
+  "$defs": {
+    "attribute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "type", "default", "help"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "label": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["boolean", "enum"] },
+        "default": { "type": ["boolean", "string", "number"] },
+        "help": { "type": "string" },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label"],
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string" }
+            }
+          }
+        },
+        "enabled_when": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["attribute", "equals"],
+          "properties": {
+            "attribute": { "type": "string" },
+            "equals": { "type": ["boolean", "string", "number"] }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "enum" } }, "required": ["type"] },
+          "then": { "required": ["options"] }
+        }
+      ]
+    },
+    "knowledgeBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "root",
+        "folder_template",
+        "filename_template",
+        "filename_example",
+        "filename_example_note",
+        "matrix_key_template",
+        "matrix_key_example",
+        "model",
+        "type_codes",
+        "dimension_codes",
+        "index_columns",
+        "privacy_note"
+      ],
+      "properties": {
+        "root": { "const": "/合规知识库" },
+        "folder_template": { "type": "string" },
+        "filename_template": { "type": "string" },
+        "filename_example": { "type": "string" },
+        "filename_example_note": { "type": "string" },
+        "matrix_key_template": { "type": "string" },
+        "matrix_key_example": { "const": "CA-08" },
+        "model": { "const": "UNI-8" },
+        "type_codes": {
+          "type": "array",
+          "minItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "meaning"],
+            "properties": {
+              "code": { "enum": ["STD", "RPT", "CERT", "DOC", "LBL", "CORR"] },
+              "meaning": { "type": "string" }
+            }
+          }
+        },
+        "dimension_codes": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "id", "name_zh"],
+            "properties": {
+              "code": { "type": "string" },
+              "id": { "type": "string" },
+              "name_zh": { "type": "string" }
+            }
+          }
+        },
+        "index_columns": { "type": "array", "items": { "type": "string" } },
+        "privacy_note": { "type": "string" }
+      }
+    }
+  }
+}

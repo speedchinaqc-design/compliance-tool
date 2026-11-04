@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-Hans" class="auth-pending">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <title>合规查询 · 欧盟 / 加拿大 / 美国</title>
+  <style>html.auth-pending body { display: none; }</style>
+  <script src="js/auth.js?v=20261104-5" charset="utf-8"></script>
+  <script>
+    if (!window.ComplianceAuth || !ComplianceAuth.hasSession()) {
+      location.replace("login.html?v=20261104-5");
+    } else {
+      document.documentElement.classList.remove("auth-pending");
+    }
+  </script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect fill='%23123c38' width='16' height='16'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css?v=20261104-5">
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <p class="eyebrow">本地工具 · 第一期</p>
+      <h1>合规查询</h1>
+      <p class="lede">给认证工程师自用的本地清单。第一期只有欧盟、加拿大、美国。本机要先登录；用户名和密码哈希只留在这台浏览器里，不上传。</p>
+      <div id="product-facts"></div>
+      <div class="top-actions no-print">
+        <button type="button" id="logout" class="top-button">退出</button>
+        <button type="button" id="reset-auth" class="top-button">重置本机密码</button>
+      </div>
+    </div>
+  </header>
+  <div class="banner">
+    <p>注意：您最终必须根据相关法律法规最新版本、指导文件或其他来源的要求采取行动。</p>
+    <p>内容来自《合规查询小工具规划书 v3》里已经写明的格子，不是法律意见。第一期只有欧盟、加拿大、美国。本工具不做 AI 判断。</p>
+  </div>
+  <main id="app"></main>
+  <noscript><p>需要启用 JavaScript。数据已经在 js/data.js 里，不会向外部服务器发送。</p></noscript>
+  <script>
+    document.getElementById("logout").addEventListener("click", function () {
+      ComplianceAuth.logout();
+      location.replace("login.html?v=20261104-5");
+    });
+    document.getElementById("reset-auth").addEventListener("click", function () {
+      var ok = window.confirm("确定重置本机密码？\n\n这会清掉这台浏览器里为本工具保存的用户名、密码哈希、产品项目和进度。\n不会删除 YAML，也不会动 Dropbox。导出的 JSON 备份不受影响。\n\n重置后需要重新设置用户名和密码。");
+      if (!ok) return;
+      ComplianceAuth.clearLocalData();
+      location.replace("login.html?v=20261104-5");
+    });
+  </script>
+  <p id="boot-error" hidden>脚本没有跑起来，所以列不出产品。请关掉旧的 python 窗口，重新运行 python3 tools/serve.py，再打开 http://127.0.0.1:8765/login.html 。</p>
+  <script>
+    window.addEventListener("error", function () {
+      var node = document.getElementById("boot-error");
+      if (node) node.hidden = false;
+    });
+  </script>
+  <script src="js/xlsx.js?v=20261104-5" charset="utf-8"></script>
+  <script src="js/logic.js?v=20261104-5" charset="utf-8"></script>
+  <script src="js/data.js?v=20261104-5" charset="utf-8"></script>
+  <script src="js/dom.js?v=20261104-5" charset="utf-8"></script>
+  <script src="js/store.js?v=20261104-5" charset="utf-8"></script>
+  <script src="js/templates.js?v=20261104-5" charset="utf-8"></script>
+  <script src="js/wizard.js?v=20261104-5" charset="utf-8"></script>
+  <script src="js/archive.js?v=20261104-5" charset="utf-8"></script>
+  <script src="js/workspace.js?v=20261104-5" charset="utf-8"></script>
+  <script src="js/app.js?v=20261104-5" charset="utf-8"></script>
+</body>
+</html>
