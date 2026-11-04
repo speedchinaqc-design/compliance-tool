@@ -79,6 +79,10 @@
   }
 
   function load() {
+    if (root.ComplianceLocal && root.ComplianceLocal.snapshot()) {
+      var live = root.ComplianceLocal.snapshot().projects;
+      return Array.isArray(live) ? live : [];
+    }
     try {
       var raw = root.localStorage.getItem(KEY);
       if (!raw) return [];
@@ -90,6 +94,11 @@
   }
 
   function save(projects) {
+    if (root.ComplianceLocal && root.ComplianceLocal.snapshot()) {
+      root.ComplianceLocal.snapshot().projects = projects;
+      root.ComplianceLocal.persist();
+      return projects;
+    }
     root.localStorage.setItem(KEY, JSON.stringify({ format: "compliance-tool-projects-v1", projects: projects }));
     return projects;
   }

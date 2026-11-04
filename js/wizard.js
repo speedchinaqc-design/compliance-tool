@@ -4,7 +4,7 @@
   var el = function () {
     return root.ComplianceDom.el.apply(null, arguments);
   };
-  var STEPS = ["选市场", "选模块", "问答", "模板与组件", "生成工作区"];
+  var STEPS = ["名称与型号", "选市场", "选模块", "问答", "模板与组件", "生成工作区"];
 
   function questionVisible(question, draft) {
     if (question.modules.length && !question.modules.some(function (item) { return draft.modules.indexOf(item) !== -1; })) return false;
@@ -28,11 +28,12 @@
       steps.append(el("li", { class: index + 1 === step ? "on" : "" }, [String(index + 1) + " " + label]));
     });
     box.append(steps);
-    if (step === 1) box.append(renderMarkets(draft));
-    if (step === 2) box.append(renderModules(draft));
-    if (step === 3) box.append(renderQuestions(draft));
-    if (step === 4) box.append(renderRecommend(draft));
-    if (step === 5) box.append(renderBuild(draft));
+    if (step === 1) box.append(renderIdentity(draft));
+    if (step === 2) box.append(renderMarkets(draft));
+    if (step === 3) box.append(renderModules(draft));
+    if (step === 4) box.append(renderQuestions(draft));
+    if (step === 5) box.append(renderRecommend(draft));
+    if (step === 6) box.append(renderBuild(draft));
     var bar = el("div", { class: "wizard-bar" });
     if (step > 1) {
       var back = el("button", { type: "button", class: "ghost", id: "wizard-back" }, ["上一步"]);
@@ -45,7 +46,7 @@
     var cancel = el("button", { type: "button", class: "ghost", id: "wizard-cancel" }, ["返回项目列表"]);
     cancel.addEventListener("click", onCancel);
     bar.append(cancel);
-    if (step < 5) {
+    if (step < 6) {
       var next = el("button", { type: "button", id: "wizard-next" }, ["下一步"]);
       next.addEventListener("click", function () {
         var error = validate(step, draft);
@@ -72,9 +73,40 @@
   }
 
   function validate(step, draft) {
-    if (step === 1 && !draft.markets.length) return "请至少选一个市场。第一期只有欧盟、加拿大、美国。";
-    if (step === 2 && !draft.modules.length) return "请至少选一个模块。";
+    if (step === 1 && !String(draft.name || "").trim()) return "请填写产品名称。";
+    if (step === 2 && !draft.markets.length) return "请至少选一个市场。第一期只有欧盟、加拿大、美国。";
+    if (step === 3 && !draft.modules.length) return "请至少选一个模块。";
     return "";
+  }
+
+  function renderIdentity(draft) {
+    if (!draft.answers) draft.answers = root.ComplianceStore.blankAnswers();
+    var name = el("input", { id: "product-name", type: "text", value: draft.name || "" });
+    name.addEventListener("input", function () { draft.name = name.value; });
+    var model = el("input", { id: "product-model", type: "text", value: (draft.archive && draft.archive.basic && draft.archive.basic.model) || "" });
+    model.addEventListener("input", function () {
+      root.ComplianceStore.ensureArchive(draft);
+      draft.archive.basic.model = model.value;
+    });
+    var sample = el("button", { type: "button", class: "ghost", id: "use-uni8" }, ["从 UNI-8 样板开始"]);
+    sample.addEventListener("click", function () {
+      var preset = root.ComplianceStore.uni8Project();
+      draft.name = preset.name;
+      draft.markets = preset.markets.slice();
+      draft.modules = preset.modules.slice();
+      draft.answers = JSON.parse(JSON.stringify(preset.answers));
+      root.ComplianceStore.ensureArchive(draft);
+      draft.archive = JSON.parse(JSON.stringify(preset.archive));
+      if (root.__wizardRefresh) root.__wizardRefresh();
+    });
+    return el("div", { id: "wizard-identity" }, [
+      el("p", {}, ["先写产品名称和型号。问答只出现在后面勾选的模块里。"]),
+      el("label", { class: "attr" }, ["产品名称", name]),
+      el("label", { class: "attr" }, ["型号", model]),
+      sample,
+      el("p", { class: "error", role: "alert" }),
+      el("p", { class: "help" }, ["命名规则：型号_市场_维度_类型_编号_签发日期_版本，例如 UNI-8_EU_08METRO_CERT_TC1234_20260115_v1.pdf。这是命名举例，不是真实证书。"]),
+    ]);
   }
 
   function renderMarkets(draft) {
@@ -171,7 +203,7 @@
   }
 
   function rerenderIfNeeded(draft) {
-    if (draft._step === 3 && root.__wizardRefresh) root.__wizardRefresh();
+    if (draft._step === 4 && root.__wizardRefresh) root.__wizardRefresh();
   }
 
   function renderRecommend(draft) {
@@ -201,7 +233,14 @@
       el("p", {}, ["产品：" + (draft.name || "未命名")]),
       el("p", {}, ["市场：" + (draft.markets.join("、") || "未选")]),
       el("p", {}, ["模块：" + (draft.modules.join("、") || "未选")]),
-      el("p", {}, ["生成后可以改答案、勾进度、填证书到期日，并导出 JSON 备份到 Dropbox。"]),
+      el("p", {}, ["生成后可以改答案、勾进度、填证书到期日。数据写在本机 data_local，并备份到 Dropbox 的 00_工具备份。"]),
+      (function () {
+        var box = el("label", { class: "choice" }, []);
+        var input = el("input", { type: "checkbox", id: "create-folders" });
+        input.checked = true;
+        box.append(input, " 在 Dropbox 里为这个型号建立文件夹（复制 _新产品模板）");
+        return box;
+      })(),
     ]);
   }
 

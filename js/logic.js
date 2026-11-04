@@ -38,12 +38,34 @@
     };
   }
 
+  var FOLDER_BY_CODE = {
+    "01": "01CYBER_网络安全",
+    "02": "02PACK_包装",
+    "03": "03DATA_数据安全",
+    "04": "04ELEC_电气安全",
+    "05": "05EMC",
+    "06": "06RADIO_无线",
+    "07": "07BATT_电池",
+    "08": "08METRO_法制计量",
+  };
+  var SHORT_BY_CODE = {
+    "01": "01CYBER",
+    "02": "02PACK",
+    "03": "03DATA",
+    "04": "04ELEC",
+    "05": "05EMC",
+    "06": "06RADIO",
+    "07": "07BATT",
+    "08": "08METRO",
+  };
+
   function pathsFor(product, marketCode, dimension) {
     const kb = product.knowledge_base;
     const map = {
       model: kb.model,
       market: marketCode,
-      dimension_code: dimension.dimension_code,
+      dimension_code: FOLDER_BY_CODE[dimension.code] || dimension.dimension_code,
+      dimension_short: SHORT_BY_CODE[dimension.code] || dimension.dimension_code,
       dimension_number: dimension.code,
     };
     return {

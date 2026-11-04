@@ -9,7 +9,10 @@
   store.seedIfEmpty();
 
   function showList() {
-    facts.textContent = "第一期市场只有欧盟、加拿大、美国。项目存在这台浏览器，可用 JSON 备份到 Dropbox。";
+    var version = window.APP_VERSION || "";
+    var versionNode = document.getElementById("app-version");
+    if (versionNode) versionNode.textContent = version ? "v" + version : "";
+    facts.textContent = "第一期市场只有欧盟、加拿大、美国。账号和项目存在本机 data_local，浏览器和桌面版共用。";
     app.replaceChildren();
     var projects = store.load();
     var page = el("section", { id: "project-list" }, [
@@ -58,8 +61,14 @@
       };
       reader.readAsText(file);
     });
-    bar.append(create, sample, exp, imp);
+    var settings = el("button", { type: "button", class: "ghost", id: "open-settings" }, ["备份与 Dropbox"]);
+    settings.addEventListener("click", showSettings);
+    var update = el("button", { type: "button", class: "ghost", id: "check-update" }, ["检查更新"]);
+    update.addEventListener("click", checkUpdate);
+    bar.append(create, sample, exp, imp, settings, update);
     page.append(bar);
+    page.append(el("div", { id: "backup-banner" }));
+    loadBackupBanner();
     if (!projects.length) page.append(el("p", { class: "empty" }, ["还没有产品。可以新建，或按 UNI-8 样板开始。"]));
     projects.forEach(function (project) {
       var card = el("article", { class: "card", id: "project-" + project.id }, [
@@ -112,6 +121,19 @@
     }, function (next) {
       next.wizardComplete = true;
       store.replace(next);
+      var createFolders = document.getElementById("create-folders");
+      var model = (next.archive && next.archive.basic && next.archive.basic.model) || next.name;
+      if (createFolders && createFolders.checked && model) {
+        fetch("/api/product-folders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model: model }),
+        }).then(function (response) { return response.json(); }).then(function (data) {
+          if (data && data.note) window.alert(data.note + (data.path ? "\n" + data.path : ""));
+          openWorkspace(next.id);
+        }).catch(function () { openWorkspace(next.id); });
+        return;
+      }
       openWorkspace(next.id);
     }, showList);
   }
@@ -131,5 +153,79 @@
     }, showList, window.__workspaceWizard);
   }
 
-  showList();
+  function loadBackupBanner() {
+    var host = document.getElementById("backup-banner");
+    if (!host) return;
+    fetch("/api/library").then(function (response) { return response.json(); }).then(function (info) {
+      var when = info.lastBackupAt;
+      var old = true;
+      if (when) {
+        var age = Date.now() - Date.parse(when);
+        old = !(age >= 0) || age > 7 * 86400000;
+      }
+      host.replaceChildren();
+      var text = when ? "最近备份：" + when : "还没有成功备份。";
+      if (info.lastBackupError) text += " " + info.lastBackupError;
+      if (!info.rootExists) text += " Dropbox 根目录目前不存在：" + info.root;
+      host.append(el("p", { class: old ? "note" : "help" }, [old ? "超过 7 天没有备份，或还没备份过。" + text : text]));
+      if (info.backupDir) host.append(window.CompliancePaths.buttons(info.backupDir));
+    }).catch(function () {});
+  }
+
+  function showSettings() {
+    fetch("/api/store").then(function (response) { return response.json(); }).then(function (storeData) {
+      var settings = storeData.settings || {};
+      app.replaceChildren();
+      var path = el("input", { id: "dropbox-root", type: "text", value: settings.dropboxRoot || "" });
+      var keep = el("input", { id: "backup-keep", type: "number", value: String(settings.backupKeep || 20) });
+      var save = el("button", { type: "button", id: "save-settings" }, ["保存"]);
+      save.addEventListener("click", function () {
+        var live = window.ComplianceLocal.snapshot();
+        live.settings = live.settings || {};
+        live.settings.dropboxRoot = path.value.trim();
+        live.settings.backupKeep = Number(keep.value || 20);
+        window.ComplianceLocal.persist().then(function () { showList(); });
+      });
+      var back = el("button", { type: "button", class: "ghost" }, ["返回"]);
+      back.addEventListener("click", showList);
+      app.append(el("section", { id: "settings-page" }, [
+        el("h2", {}, ["备份与 Dropbox"]),
+        el("p", { class: "help" }, ["默认根目录是本机的 Dropbox\\合规知识库。留空就用这个默认位置。自动备份写到其中的 00_工具备份，只保留最近若干份。"]),
+        el("label", { class: "attr" }, ["Dropbox 根目录", path]),
+        window.CompliancePaths.buttons(function () { return path.value || ""; }),
+        el("label", { class: "attr" }, ["保留备份份数", keep]),
+        el("div", { class: "wizard-bar" }, [save, back]),
+      ]));
+    });
+  }
+
+  function checkUpdate() {
+    fetch("/api/update").then(function (response) { return response.json(); }).then(function (info) {
+      if (!info.ok) {
+        window.alert("没能查看 GitHub 发布。" + (info.error || ""));
+        return;
+      }
+      if (!info.newer) {
+        window.alert("当前已是 v" + info.local + "。");
+        return;
+      }
+      var ok = window.confirm("发现 " + info.latest + "，当前是 v" + info.local + "。\n下载并覆盖程序文件？data_local 会保留。");
+      if (!ok) return;
+      fetch("/api/update/apply", { method: "POST" }).then(function (response) { return response.json(); }).then(function (result) {
+        window.alert(result.message || result.error || "已处理");
+      });
+    }).catch(function () { window.alert("检查更新失败。"); });
+  }
+
+  if (window.ComplianceLocal) {
+    window.ComplianceLocal.ready.then(function () {
+      store.seedIfEmpty();
+      showList();
+    }).catch(function () {
+      facts.textContent = "没有连上本机服务。请运行 python3 tools/serve.py 。";
+    });
+  } else {
+    store.seedIfEmpty();
+    showList();
+  }
 })();

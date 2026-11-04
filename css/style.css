@@ -246,6 +246,15 @@ button.ghost { background: transparent; color: var(--accent); border: 1px solid 
   align-items: center;
 }
 
+a.button-link {
+  display: inline-block;
+  padding: 8px 12px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  text-decoration: none;
+  background: transparent;
+}
+
 .card-head { justify-content: space-between; }
 
 .market, .dim, .matrix-key, .status {

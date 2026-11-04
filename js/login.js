@@ -89,7 +89,7 @@
       auth
         .setup(data.get("username"), password)
         .then(function () {
-          window.location.replace("index.html?v=20261104-5");
+          window.location.replace("index.html?v=1.1.0");
         })
         .catch(function (err) {
           button.disabled = false;
@@ -140,7 +140,7 @@
         .login(data.get("username"), data.get("password"))
         .then(function (ok) {
           if (ok) {
-            window.location.replace("index.html?v=20261104-5");
+            window.location.replace("index.html?v=1.1.0");
             return;
           }
           button.disabled = false;
@@ -165,14 +165,24 @@
     );
   }
 
-  if (auth.hasSession()) {
-    window.location.replace("index.html?v=20261104-5");
-    return;
+  function boot() {
+    if (auth.hasSession()) {
+      window.location.replace("index.html?v=1.1.0");
+      return;
+    }
+    if (!auth.cryptoAvailable()) {
+      renderCryptoMissing();
+      return;
+    }
+    if (!auth.hasRecord()) renderSetup();
+    else renderLogin();
   }
-  if (!auth.cryptoAvailable()) {
-    renderCryptoMissing();
-    return;
+
+  if (window.ComplianceLocal) {
+    window.ComplianceLocal.ready.then(boot).catch(function () {
+      renderCryptoMissing();
+    });
+  } else {
+    boot();
   }
-  if (!auth.hasRecord()) renderSetup();
-  else renderLogin();
 })();

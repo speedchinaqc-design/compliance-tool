@@ -66,11 +66,11 @@ assert(canadaOnly.length === 8, "只选加拿大应为 8 条，实际 " + canada
 const radioView = ComplianceLogic.visibleRows(COMPLIANCE_DATA, { ...defaults, view: "dimension", dimensionCode: "06" });
 assert(radioView.length === 3, "按维度看无线应为 3 个市场");
 assert(radioView[1].matrixKey === "CA-06", "市场顺序应为欧、加、美，第二行是 CA-06，实际 " + radioView[1].matrixKey);
-assert(radioView[1].folder === "/合规知识库/02_产品/UNI-8/CA/06RADIO/", "Dropbox 文件夹不对：" + radioView[1].folder);
+assert(radioView[1].folder === "/合规知识库/02_产品/UNI-8/CA/06RADIO_无线/", "Dropbox 文件夹不对：" + radioView[1].folder);
 assert(radioView[1].filenamePattern.startsWith("UNI-8_CA_06RADIO_"), "文件名规则不对");
 
 const caBattery = checklist.find((row) => row.entry.id === "CA-07");
-assert(caBattery.folder === "/合规知识库/02_产品/UNI-8/CA/07BATT/", caBattery.folder);
+assert(caBattery.folder === "/合规知识库/02_产品/UNI-8/CA/07BATT_电池/", caBattery.folder);
 assert(caBattery.matrixKey === "CA-07", caBattery.matrixKey);
 assert(caBattery.entry.status === "已核实", "加拿大电池应为已核实");
 assert(caBattery.entry.obligation.includes("强制风险"), "应保留强制性原文");

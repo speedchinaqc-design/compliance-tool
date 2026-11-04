@@ -109,6 +109,7 @@
       el("p", {}, ["需要的证据：" + ((entry.evidence_types || []).join("、") || "未声明")]),
       el("p", { class: "source" }, ["来源 ", el("a", { href: entry.source_url, rel: "noopener noreferrer" }, [entry.source_url])]),
       el("p", { class: "path" }, [row.folder]),
+      root.CompliancePaths.buttons(row.folder),
     ]);
     row.notes.forEach(function (note) { article.append(el("p", { class: "note" }, [note])); });
     if (entry.health_canada_reply) {
@@ -140,6 +141,7 @@
       item.layer1.official_link ? el("p", {}, ["官方链接 ", el("a", { href: item.layer1.official_link, rel: "noopener noreferrer" }, [item.layer1.official_link])]) : null,
       el("p", {}, ["第二层标准：" + (item.layer2.standard || "待确认")]),
       el("p", { class: "path" }, [item.layer2.dropbox_path || item.layer2.link || "标准位置待确认"]),
+      item.layer2.dropbox_path ? root.CompliancePaths.buttons(item.layer2.dropbox_path) : null,
       el("p", {}, ["结论：" + item.conclusion]),
       el("p", { class: "help" }, ["来源：" + (item.source || "待确认") + "。这是导入结果，不覆盖矩阵原文。"]),
     ]);
