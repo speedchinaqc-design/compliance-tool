@@ -181,13 +181,12 @@ sized.basic.variantRows = [{
 }];
 assert(store.migrateVariants(sized) === true, "旧屏幕尺寸应迁进第一项");
 const sizedRow = sized.basic.variantRows[0];
-assert(sizedRow.screens[0].operator.type === "操作屏" && sizedRow.screens[0].operator.size === "7 寸双屏", "旧文字应原样留在操作屏");
-assert(sizedRow.screens[0].customer.type === "客显屏" && sizedRow.screens[0].customer.size === "", "应配上客显屏");
-assert(store.screenSummary(sizedRow.screens) === "操作屏 7 寸双屏");
-sizedRow.screens[0].operator.size = "15.6 寸";
-sizedRow.screens[0].customer.size = "7 寸";
+assert(sizedRow.screens[0].text === "7 寸双屏", "旧的整段文字应原样留下");
+assert(store.screenSummary(sizedRow.screens) === "操作屏+客显屏 7 寸双屏");
+sizedRow.screens[0].text = "10寸+7寸";
+sizedRow.screens.push({ text: "10寸+10寸" });
 store.touchVariants(sized);
-assert(sizedRow.screen === "操作屏 15.6 寸 + 客显屏 7 寸", "汇总应带上成对屏幕");
+assert(sizedRow.screen === "操作屏+客显屏 10寸+7寸；10寸+10寸", "汇总应按行拼接");
 const sizedSnap = JSON.stringify(sized.basic.variantRows);
 assert(store.migrateVariants(sized) === false, "屏幕列表再次迁移不能改写");
 assert(JSON.stringify(sized.basic.variantRows) === sizedSnap);
@@ -195,10 +194,9 @@ const paired = store.blankArchive();
 paired.basic.variantRows = [{
   model: "UNI-8B",
   screens: [
-    { type: "操作屏", size: "15.6 寸" },
-    { type: "客显屏", size: "7 寸" },
-    { type: "副屏", size: "10 寸" },
-    { type: "客显屏", size: "5 寸" },
+    { operator: { type: "操作屏", size: "10寸" }, customer: { type: "客显屏", size: "7寸" } },
+    { operator: { type: "操作屏", size: "10寸" }, customer: { type: "客显屏", size: "10寸" } },
+    { operator: { type: "操作屏", size: "" }, customer: { type: "客显屏", size: "" } },
   ],
   status: "研发",
   statusNote: "",
@@ -208,9 +206,10 @@ paired.basic.variantRows = [{
   labelInfo: "",
 }];
 assert(store.migrateVariants(paired) === true);
-assert(paired.basic.variantRows[0].screens.length === 2, "四条屏幕应配成两行");
-assert(paired.basic.variantRows[0].screens[1].operator.type === "副屏" && paired.basic.variantRows[0].screens[1].operator.size === "10 寸");
-assert(store.screenSummary(paired.basic.variantRows[0].screens) === "操作屏 15.6 寸 + 客显屏 7 寸 + 副屏 10 寸 + 客显屏 5 寸");
+assert(paired.basic.variantRows[0].screens.length === 2, "空行应丢掉");
+assert(paired.basic.variantRows[0].screens[0].text === "10寸+7寸" && paired.basic.variantRows[0].screens[1].text === "10寸+10寸");
+assert(paired.basic.variantRows[0].screens[0].operator.size === "10寸", "原来的尺寸要留在数据里");
+assert(store.screenSummary(paired.basic.variantRows[0].screens) === "操作屏+客显屏 10寸+7寸；10寸+10寸");
 
 const cell = store.uni8Project();
 assert(store.homeCellFlags(cell, ["CA-07"], [], []).indexOf("缺证据") !== -1, "没有证据应算缺证据");

@@ -370,12 +370,7 @@
   }
 
   function screenEditors(row, onCommit) {
-    if (!Array.isArray(row.screens)) {
-      row.screens = [
-        { type: "操作屏", size: row.screen || "" },
-        { type: "客显屏", size: "" },
-      ];
-    }
+    if (!Array.isArray(row.screens)) row.screens = [{ text: row.screen || "" }];
     var box = el("div", { class: "screen-stack" });
     var summary = el("p", { class: "help screen-summary" });
     function paintSummary() {
@@ -383,65 +378,33 @@
       row.screen = text;
       summary.textContent = text || "尚未填写屏幕尺寸。";
     }
-    (row.screens || []).forEach(function (pair, index) {
-      var line = el("div", { class: "screen-line" });
-      line.append(screenSide(pair, "operator", "操作屏", paintSummary, onCommit));
-      line.append(screenSide(pair, "customer", "客显屏", paintSummary, onCommit));
+    (row.screens || []).forEach(function (item, index) {
+      var input = el("input", { type: "text", value: item.text || "", placeholder: "例如 10寸+7寸" });
+      input.addEventListener("change", function () {
+        item.text = input.value;
+        paintSummary();
+        onCommit(false);
+      });
       var del = el("button", { type: "button", class: "ghost" }, ["删除"]);
       del.addEventListener("click", function () {
         row.screens.splice(index, 1);
         paintSummary();
         onCommit(true);
       });
-      line.append(del);
-      box.append(line);
+      box.append(el("div", { class: "screen-line" }, [
+        el("span", { class: "screen-label" }, ["操作屏+客显屏"]),
+        input,
+        del,
+      ]));
     });
     var add = el("button", { type: "button", class: "ghost" }, ["增加屏幕尺寸"]);
     add.addEventListener("click", function () {
-      row.screens.push({ operator: { type: "操作屏", size: "" }, customer: { type: "客显屏", size: "" } });
+      row.screens.push({ text: "" });
       onCommit(true);
     });
     paintSummary();
     box.append(summary, add);
     return box;
-  }
-
-  function screenSide(pair, key, fallback, paintSummary, onCommit) {
-    var side = pair[key] || { type: fallback, size: "" };
-    pair[key] = side;
-    var known = side.type === "操作屏" || side.type === "客显屏";
-    var select = el("select", { "aria-label": fallback + "类型" });
-    [["操作屏", "操作屏"], ["客显屏", "客显屏"], ["__custom", "其他"]].forEach(function (optionPair) {
-      var option = el("option", { value: optionPair[0] }, [optionPair[1]]);
-      if ((known && optionPair[0] === side.type) || (!known && optionPair[0] === "__custom")) option.selected = true;
-      select.append(option);
-    });
-    var custom = el("input", { type: "text", value: known ? "" : (side.type || ""), placeholder: "例如 副屏" });
-    if (known) custom.hidden = true;
-    select.addEventListener("change", function () {
-      if (select.value === "__custom") {
-        custom.hidden = false;
-        side.type = custom.value.trim();
-        custom.focus();
-      } else {
-        custom.hidden = true;
-        side.type = select.value;
-      }
-      paintSummary();
-      onCommit(false);
-    });
-    custom.addEventListener("change", function () {
-      side.type = custom.value.trim();
-      paintSummary();
-      onCommit(false);
-    });
-    var size = el("input", { type: "text", value: side.size || "", placeholder: "例如 7 寸" });
-    size.addEventListener("change", function () {
-      side.size = size.value;
-      paintSummary();
-      onCommit(false);
-    });
-    return el("div", { class: "screen-side" }, [select, custom, size]);
   }
 
   function choosePhotos(list, onCommit) {

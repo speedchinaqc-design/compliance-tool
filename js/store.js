@@ -274,32 +274,42 @@
     return photos.filter(function (item) { return item && item.typical && item.path; })[0] || photos.filter(function (item) { return item && item.path; })[0] || null;
   }
 
-  function screenSideText(side) {
-    var type = String((side && side.type) || "").trim();
-    var size = String((side && side.size) || "").trim();
-    if (!size) return "";
-    return type ? type + " " + size : size;
+  function pairText(operatorSize, customerSize) {
+    var operator = String(operatorSize || "").trim();
+    var customer = String(customerSize || "").trim();
+    if (operator && customer) return operator + "+" + customer;
+    return operator || customer;
   }
 
   function screenSummary(screens) {
-    return (screens || []).map(function (item) {
-      if (item && item.operator) return [screenSideText(item.operator), screenSideText(item.customer)].filter(Boolean).join(" + ");
-      var type = String((item && item.type) || "").trim();
-      var size = String((item && item.size) || "").trim();
-      if (!size) return "";
-      return type ? type + " " + size : size;
-    }).filter(Boolean).join(" + ");
+    var parts = (screens || []).map(function (item) {
+      return String((item && item.text) || "").trim();
+    }).filter(Boolean);
+    if (!parts.length) return "";
+    return "操作屏+客显屏 " + parts.join("；");
   }
 
-  function normalizeSide(side, fallbackType) {
-    var source = side && typeof side === "object" ? side : {};
-    return { type: String(source.type || fallbackType), size: String(source.size || "") };
+  function keepTextRow(item) {
+    var row = { text: String((item && item.text) || "") };
+    if (item && item.operator && typeof item.operator === "object") {
+      row.operator = { type: String(item.operator.type || ""), size: String(item.operator.size || "") };
+    }
+    if (item && item.customer && typeof item.customer === "object") {
+      row.customer = { type: String(item.customer.type || ""), size: String(item.customer.size || "") };
+    }
+    return row;
   }
 
-  function normalizeScreenRows(list) {
-    return (list || []).map(function (item) {
-      return { operator: normalizeSide(item && item.operator, "操作屏"), customer: normalizeSide(item && item.customer, "客显屏") };
-    });
+  function textFromPair(item) {
+    var operator = (item && item.operator) || {};
+    var customer = (item && item.customer) || {};
+    var text = pairText(operator.size, customer.size);
+    if (!text) return null;
+    return {
+      text: text,
+      operator: { type: String(operator.type || ""), size: String(operator.size || "") },
+      customer: { type: String(customer.type || ""), size: String(customer.size || "") },
+    };
   }
 
   function pairFlatScreens(flat) {
@@ -307,34 +317,40 @@
     var index;
     for (index = 0; index < flat.length; index += 2) {
       var left = flat[index] || {};
-      var right = flat[index + 1] || { type: "客显屏", size: "" };
+      var right = flat[index + 1] || {};
+      var text = pairText(left.size, right.size);
+      if (!text) continue;
       rows.push({
-        operator: { type: String(left.type || "操作屏"), size: String(left.size || "") },
-        customer: { type: String(right.type || "客显屏"), size: String(right.size || "") },
+        text: text,
+        operator: { type: String(left.type || ""), size: String(left.size || "") },
+        customer: { type: String(right.type || ""), size: String(right.size || "") },
       });
     }
-    return rows.length ? rows : [{ operator: { type: "操作屏", size: "" }, customer: { type: "客显屏", size: "" } }];
+    return rows;
   }
 
   function normalizeScreens(source) {
     var raw = source && source.screens;
     if (Array.isArray(raw)) {
       if (!raw.length) return [];
-      if (raw[0] && typeof raw[0] === "object" && raw[0].operator) return normalizeScreenRows(raw);
+      if (raw[0] && typeof raw[0] === "object" && Object.prototype.hasOwnProperty.call(raw[0], "text")) {
+        return raw.map(keepTextRow);
+      }
+      if (raw[0] && typeof raw[0] === "object" && raw[0].operator) {
+        return raw.map(textFromPair).filter(Boolean);
+      }
       return pairFlatScreens(raw.map(function (item) {
         var entry = item && typeof item === "object" ? item : {};
         return { type: String(entry.type || ""), size: String(entry.size || "") };
       }));
     }
-    return pairFlatScreens([
-      { type: "操作屏", size: String((source && source.screen) || "") },
-      { type: "客显屏", size: "" },
-    ]);
+    var legacy = String((source && source.screen) || "").trim();
+    return legacy ? [{ text: legacy }] : [];
   }
 
   function emptyVariantRow(basic) {
     basic = basic || {};
-    var screens = [{ operator: { type: "操作屏", size: "" }, customer: { type: "客显屏", size: "" } }];
+    var screens = [{ text: "" }];
     return {
       model: "",
       screen: screenSummary(screens),
