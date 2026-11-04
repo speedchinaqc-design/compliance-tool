@@ -99,6 +99,10 @@
       wrap.append(customCard(project, item, onChange));
     });
     wrap.append(customForm(project, onChange));
+    if (root.ComplianceFold) {
+      wrap.insertBefore(root.ComplianceFold.toolbar(), wrap.firstChild);
+      root.ComplianceFold.apply(wrap, project);
+    }
     return wrap;
   }
 

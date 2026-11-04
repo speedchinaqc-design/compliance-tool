@@ -89,7 +89,7 @@
       auth
         .setup(data.get("username"), password)
         .then(function () {
-          window.location.replace("index.html?v=1.4.0");
+          window.location.replace("index.html?v=1.4.1");
         })
         .catch(function (err) {
           button.disabled = false;
@@ -140,7 +140,7 @@
         .login(data.get("username"), data.get("password"))
         .then(function (ok) {
           if (ok) {
-            window.location.replace("index.html?v=1.4.0");
+            window.location.replace("index.html?v=1.4.1");
             return;
           }
           button.disabled = false;
@@ -167,7 +167,7 @@
 
   function boot() {
     if (auth.hasSession()) {
-      window.location.replace("index.html?v=1.4.0");
+      window.location.replace("index.html?v=1.4.1");
       return;
     }
     if (!auth.cryptoAvailable()) {

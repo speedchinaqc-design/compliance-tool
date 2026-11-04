@@ -17,7 +17,7 @@
     (root.ComplianceStore.materialAlerts(archive) || []).forEach(function (note) {
       box.append(el("p", { class: "note" }, [note]));
     });
-    box.append(el("h3", {}, ["关键元器件总表"]));
+    box.append(el("h3", { "data-fold": "关键元器件总表", "data-summary": "关键元器件总表：共 " + (archive.components || []).length + " 行" }, ["关键元器件总表"]));
     box.append(el("p", { class: "help" }, ["合并 CB 的 Critical components information 和 UL 的 List of critical components。这里只存字段和路径。"]));
     var query = el("input", { type: "search", id: "component-search", placeholder: "按部件或制造商搜索" });
     var tableHost = el("div");
@@ -28,14 +28,14 @@
     query.addEventListener("input", paint);
     box.append(query, tableHost);
     paint();
-    box.append(el("h3", {}, ["从报告导入关键件"]));
+    box.append(el("h3", { "data-fold": "从报告导入关键件", "data-summary": "从报告导入关键件：" + ((archive.componentPreview || []).length ? "待确认 " + archive.componentPreview.length + " 行" : "未导入") }, ["从报告导入关键件"]));
     box.append(importPanel(project, onChange));
-    box.append(el("h3", {}, ["供应商材料保证书"]));
+    box.append(el("h3", { "data-fold": "供应商材料保证书", "data-summary": "材料保证书：共 " + (archive.materials || []).length + " 份", "data-warn": (root.ComplianceStore.materialAlerts(archive) || []).length ? "1" : "0" }, ["供应商材料保证书"]));
     box.append(el("p", { class: "help" }, [
       "模板栏位：成型廠名稱 MOLDER NAME、購買者 PURCHASER NAME、料號 PART NUMBER、品名 PART DESCRIPTION、數量/採購單號碼 QUANTITY/P.O. NO.、規格書號碼 SPECIFICATION NO.、成型日期 MOLDING DATE、出貨日期 SHIPPING DATE、原料製造商 MATERIAL MANUFACTURER、原料型號 MATERIAL DESIGNATION、原料 UL 號碼 MATERIAL UL FILE NUMBER、原料防火等級 MATERIAL FLAMMABILITY CLASS、色料或添加劑 COLOR CONCENTRATES OR ADDITIVES、二次料 REGRIND %、Rev。命名示例 UNI-8_GEN_10MAT_COC_料号_20260301_V1.pdf。文件夹 GEN/10MAT_材料保证书。VO 或 V0 会记成 V-0。",
     ]));
     box.append(materialPanel(project, onChange));
-    box.append(el("h3", {}, ["交叉比对"]));
+    box.append(el("h3", { "data-fold": "交叉比对", "data-summary": "交叉比对：不一致 " + counts.diff + "、缺失 " + counts.missing + "、未登记 " + counts.unregistered, "data-warn": counts.diff || counts.missing || counts.unregistered || counts.expired ? "1" : "0" }, ["交叉比对"]));
     box.append(comparePanel(project, onChange));
     return box;
   }

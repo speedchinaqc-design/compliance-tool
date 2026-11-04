@@ -429,6 +429,32 @@ textarea.fixed-note, .fixed-note {
 
 .archive-filter .choice { margin: 4px 0; }
 
+.fold-toggle {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin: 8px 0 4px;
+  padding: 8px 10px;
+  background: white;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.fold-title { font-weight: 650; }
+
+.fold-summary { color: var(--muted); font-size: 13px; font-weight: 400; }
+
+.fold-toggle[aria-expanded="true"] .fold-summary { display: none; }
+
+.fold-warn .fold-summary { color: #8d2f2f; }
+
+.fold-body[hidden] { display: none; }
+
 .missing { color: #8d2f2f; }
 
 button.missing { color: #8d2f2f; border-color: #8d2f2f; }

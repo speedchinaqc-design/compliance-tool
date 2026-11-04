@@ -62,6 +62,10 @@
     if (section === "changes") page.append(renderChanges(project, onChange));
     if (section === "cb") page.append(renderCb(project, rows, onChange));
     if (section === "other") page.append(renderOther(project));
+    if (root.ComplianceFold) {
+      page.insertBefore(root.ComplianceFold.toolbar(), page.firstChild);
+      root.ComplianceFold.apply(page, project);
+    }
     host.append(page);
   }
 
@@ -303,6 +307,16 @@
     return true;
   }
 
+  function marketSummary(records) {
+    var lack = 0;
+    var soon = 0;
+    records.forEach(function (record) {
+      if ((record.flags || []).indexOf("缺证据") !== -1) lack += 1;
+      if ((record.flags || []).indexOf("即将过期") !== -1) soon += 1;
+    });
+    return "市场 × 模块：缺证据 " + lack + "、即将过期 " + soon;
+  }
+
   function renderHome(project, rows, onChange) {
     var records = summaryRows(project, rows);
     var modules = [];
@@ -399,7 +413,7 @@
       el("p", { id: "todo-counts" }, ["产品测试：待定 " + counts.pending + " · 进行中 " + counts.doing + " · 逾期 " + counts.overdue]),
       el("p", { id: "product-status", class: "note" }, ["产品状态：" + aggregate + "。由各变体是否「已上市」汇总，主型号本身不是变体。"]),
       waivers.length ? el("p", { class: "help" }, ["领导层决定先不做测试（不计入缺失证据）：" + waivers.join("；")]) : null,
-      el("h3", {}, ["市场 × 模块"]),
+      el("h3", { "data-fold": "市场 × 模块", "data-summary": marketSummary(records), "data-warn": records.some(function (record) { return (record.flags || []).indexOf("缺证据") !== -1 || (record.flags || []).indexOf("即将过期") !== -1; }) ? "1" : "0" }, ["市场 × 模块"]),
       filterBar,
       el("p", { class: "help" }, ["状态可多选：一行只要命中所选中的一项就会留下。即将过期包括已到期和 90 天内。全选等于不限。"]),
       count,
@@ -532,7 +546,7 @@
   function renderOverview(project) {
     var data = root.ComplianceStore.overview(project);
     var box = el("section", { id: "product-overview", class: "card" }, [
-      el("h3", {}, ["产品信息总览"]),
+      el("h3", { "data-fold": "产品信息总览", "data-summary": "产品信息总览：" + data.label, "data-warn": data.items.some(function (item) { return !item.filled; }) || (data.alerts && data.alerts.length) ? "1" : "0" }, ["产品信息总览"]),
       el("p", { id: "overview-count" }, [data.label]),
     ]);
     if (data.compare) {
@@ -594,6 +608,8 @@
       pathField("主型号照片的 Dropbox 路径", basic.photoPath, function (value) { basic.photoPath = value; onChange(project); refresh(); }),
     ]);
     if (basic.photoPath) box.append(localThumb(basic.photoPath));
+    var filledPreview = root.ComplianceStore.filledVariants(basic);
+    box.append(el("h3", { "data-fold": "型号变体", "data-summary": "型号变体：" + filledPreview.length + " 个已填" }, ["型号变体"]));
     var table = el("table", { class: "bands variant-table", id: "variant-table" });
     table.append(el("caption", {}, ["型号变体"]));
     var head = el("tr");
@@ -629,6 +645,7 @@
     box.append(el("p", { id: "status-aggregate", class: "note" }, [
       "产品状态：" + root.ComplianceStore.aggregateStatus(basic) + "。只统计已填写的变体：全部是已上市、只有一部分已上市，或都还没有上市。",
     ]));
+    box.append(el("h3", { "data-fold": "各变体状态", "data-summary": "上市状态：" + root.ComplianceStore.aggregateStatus(basic) }, ["各变体状态与上市日期"]));
     var statusTable = el("table", { class: "bands variant-table", id: "variant-status" });
     statusTable.append(el("caption", {}, ["各变体状态与上市日期"]));
     var statusHead = el("tr");
@@ -747,7 +764,9 @@
         var row = rows.filter(function (entry) { return entry.entry.id === id; })[0];
         return row ? requirementTitle(rows, id) + " · " + root.ComplianceStore.versionGap(item, row.entry) : id;
       }).join("；");
+      var soon = root.ComplianceStore.daysUntil(item.expiry);
       box.append(el("article", { class: "card" }, [
+        el("h3", { "data-fold": "证据-" + (item.id || index), "data-summary": (item.reportNo || item.type || "证据") + (item.expiry ? " · 到期 " + item.expiry : ""), "data-warn": soon != null && soon <= 90 ? "1" : "0" }, [item.reportNo || item.type || "证据"]),
         selectField("类型", item.type, EVIDENCE_TYPES, function (value) { item.type = value; onChange(project); }),
         pathField("Dropbox 路径", item.dropboxPath, function (value) { item.dropboxPath = value; onChange(project); }),
         textField("页码", item.page, function (value) { item.page = value; onChange(project); }),
