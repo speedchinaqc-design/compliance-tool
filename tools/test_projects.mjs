@@ -126,4 +126,8 @@ assert(store.modelGaps(sample).length === 1, "未覆盖的示例型号应被标�
 const exported = JSON.stringify(store.exportPayload([sample]));
 assert(exported.indexOf("26-005366-600") !== -1 && exported.indexOf("非真实编号") !== -1, "导出 JSON 应含档案");
 
+const flagged = store.applyRegulationUpdates([sample], {
+  updates: [{ requirement: "CA-07", source_url: "https://example.com/ca", detected_at: "2026-11-04", summary: "来源页有变化" }],
+});
+assert(flagged === 1 && sample.reviews["CA-07"].status === "需要复核", "应标记需要复核");
 console.log("project tests passed");
