@@ -1,7 +1,10 @@
 # 把已生成的 exe 装到当前用户，并加上桌面和开始菜单快捷方式。
 $ErrorActionPreference = "Stop"
 $Name = "合规查询工具"
-$Source = Join-Path $PSScriptRoot "..\dist\$Name.exe"
+$Source = Join-Path $PSScriptRoot "..\dist\ComplianceTool.exe"
+if (-not (Test-Path $Source)) {
+  $Source = Join-Path $PSScriptRoot "..\dist\$Name.exe"
+}
 if (-not (Test-Path $Source)) {
   $Source = Join-Path $PSScriptRoot "..\dist\$Name\$Name.exe"
 }
@@ -11,12 +14,12 @@ if (-not (Test-Path $Source)) {
 }
 $DestDir = Join-Path $env:LOCALAPPDATA $Name
 New-Item -ItemType Directory -Force -Path $DestDir | Out-Null
-Copy-Item $Source (Join-Path $DestDir "$Name.exe") -Force
+Copy-Item $Source (Join-Path $DestDir "ComplianceTool.exe") -Force
 $Icon = Join-Path $PSScriptRoot "app.ico"
 $Wsh = New-Object -ComObject WScript.Shell
 function New-Link($path) {
   $link = $Wsh.CreateShortcut($path)
-  $link.TargetPath = Join-Path $DestDir "$Name.exe"
+  $link.TargetPath = Join-Path $DestDir "ComplianceTool.exe"
   $link.WorkingDirectory = $DestDir
   $link.Description = "本地合规查询"
   if (Test-Path $Icon) { $link.IconLocation = $Icon }

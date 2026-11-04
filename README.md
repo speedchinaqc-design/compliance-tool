@@ -20,7 +20,7 @@ python3 tools/serve.py
 
 ## Windows 桌面版
 
-从 [v1.1 发布页](https://github.com/speedchinaqc-design/compliance-tool/releases/tag/v1.1) 下载 `合规查询工具.exe`，放到一个文件夹后双击。它会在本机打开窗口，关掉窗口就停止服务。
+从 [v1.1 发布页](https://github.com/speedchinaqc-design/compliance-tool/releases/tag/v1.1) 下载 `ComplianceTool.exe`，放到一个文件夹后双击。窗口标题是「合规查询工具」。关掉窗口就停止服务。
 
 也可以在已解压的仓库里用 PowerShell 运行：
 
