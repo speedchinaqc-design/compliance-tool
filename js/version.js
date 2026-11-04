@@ -1,4 +1,4 @@
 (function (root) {
   "use strict";
-  root.APP_VERSION = "1.3.4";
+  root.APP_VERSION = "1.4.0";
 })(typeof globalThis !== "undefined" ? globalThis : this);

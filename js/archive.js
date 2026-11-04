@@ -11,7 +11,8 @@
     ["sensitive", "成本与供应商"],
     ["evidence", "证据登记"],
     ["comparison", "对比清单"],
-    ["bom", "关键件"],
+    ["bom", "关键件与材料管控"],
+    ["ul", "UL 体系"],
     ["labels", "标签与铭牌"],
     ["manuals", "说明书"],
     ["parties", "责任主体"],
@@ -50,7 +51,8 @@
     if (section === "sensitive") page.append(renderSensitive(project, onChange));
     if (section === "evidence") page.append(renderEvidence(project, rows, onChange));
     if (section === "comparison") page.append(renderComparison(project, rows, onChange));
-    if (section === "bom") page.append(renderBom(project, onChange));
+    if (section === "bom") page.append(root.ComplianceMaterials ? root.ComplianceMaterials.render(project, rows, onChange) : renderBom(project, onChange));
+    if (section === "ul") page.append(renderUl(project, rows, onChange));
     if (section === "labels") page.append(renderLabels(project, rows, onChange));
     if (section === "manuals") page.append(renderManuals(project, onChange));
     if (section === "parties") page.append(renderParties(project, onChange));
@@ -61,6 +63,66 @@
     if (section === "cb") page.append(renderCb(project, rows, onChange));
     if (section === "other") page.append(renderOther(project));
     host.append(page);
+  }
+
+  function pickFiles(images, done) {
+    fetch("/api/pick-files", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images: !!images }),
+    }).then(function (response) { return response.json(); }).then(function (data) {
+      if (!data || data.ok === false) {
+        window.alert((data && data.error) || "没能打开文件选择窗口。");
+        return;
+      }
+      if (data.cancelled) return;
+      if (data.outside && data.outside.length) window.alert("这些文件不在 Dropbox 合规知识库里，没有加入：\n" + data.outside.join("\n"));
+      done(data.files || []);
+    }).catch(function () {
+      window.alert("没能打开文件选择窗口。请用 python3 tools/serve.py 或桌面版。");
+    });
+  }
+
+  function pathWithFile(label, record, key, onChange) {
+    var wrap = pathField(label, record[key], function (value) { record[key] = value; onChange(); });
+    var button = el("button", { type: "button" }, ["选择文件"]);
+    button.addEventListener("click", function () {
+      pickFiles(false, function (files) {
+        if (!files[0]) return;
+        record[key] = files[0];
+        onChange();
+        refresh();
+      });
+    });
+    wrap.append(button);
+    return wrap;
+  }
+
+  function modelListEditor(record, onChange) {
+    var box = el("div", { class: "model-list" }, [el("p", {}, ["覆盖型号"])]);
+    (record.modelsCovered || []).forEach(function (name, index) {
+      var input = el("input", { type: "text", value: name });
+      input.addEventListener("change", function () {
+        record.modelsCovered[index] = input.value.trim();
+        onChange();
+      });
+      var del = el("button", { type: "button", class: "ghost" }, ["删除"]);
+      del.addEventListener("click", function () {
+        record.modelsCovered.splice(index, 1);
+        onChange();
+        refresh();
+      });
+      box.append(el("div", { class: "screen-line" }, [input, del]));
+    });
+    var add = el("button", { type: "button", class: "ghost" }, ["增加型号"]);
+    add.addEventListener("click", function () {
+      record.modelsCovered = record.modelsCovered || [];
+      record.modelsCovered.push("");
+      onChange();
+      refresh();
+    });
+    box.append(add);
+    return box;
   }
 
   function pathField(label, value, onValue) {
@@ -473,6 +535,12 @@
       el("h3", {}, ["产品信息总览"]),
       el("p", { id: "overview-count" }, [data.label]),
     ]);
+    if (data.compare) {
+      box.append(el("p", {}, ["关键件比对：一致 " + data.compare.consistent + "，不一致 " + data.compare.diff + "，缺失 " + data.compare.missing + "，未登记 " + data.compare.unregistered + "，过期 " + data.compare.expired + "，疑似匹配 " + data.compare.fuzzy]));
+    }
+    (data.alerts || []).slice(0, 6).forEach(function (note) {
+      box.append(el("p", { class: "missing" }, [note]));
+    });
     var missing = data.items.filter(function (item) { return !item.filled; });
     if (missing.length) {
       var list = el("ul", { id: "overview-missing" });
@@ -974,6 +1042,133 @@
     }).catch(function () {});
   }
 
+  function renderUl(project, rows, onChange) {
+    var ul = project.archive.basic.ul;
+    var folder = "/合规知识库/02_产品/" + folderModel(project) + "/GEN/04ELEC_电气安全/";
+    var box = el("div", { id: "ul-record", class: "card" }, [
+      el("h3", {}, ["UL 体系"]),
+      el("p", { class: "help" }, ["结构比照 CB。作为已有 US-04（UL 62368-1）的参考证据。文件仍只记路径。"]),
+      el("p", { class: "path" }, [folder]),
+      root.CompliancePaths.buttons(folder),
+    ]);
+    box.append(textField("File No.", ul.fileNo, function (value) { ul.fileNo = value; onChange(project); }));
+    box.append(el("p", {}, [el("a", { href: "https://productiq.ulprospector.com/", target: "_blank", rel: "noopener noreferrer" }, ["打开 UL Product iQ"])]));
+    box.append(textField("CCN", ul.ccn, function (value) { ul.ccn = value; onChange(project); }));
+    box.append(selectField("认证类型", ul.certType || "Listed", ["Listed", "Recognized", "Classified"], function (value) { ul.certType = value; onChange(project); }));
+    box.append(textField("标准", ul.standard, function (value) { ul.standard = value; onChange(project); }));
+    box.append(textField("标准版本", ul.standardVersion, function (value) { ul.standardVersion = value; onChange(project); refresh(); }));
+    box.append(modelListEditor(ul, function () { onChange(project); }));
+    box.append(el("label", { class: "attr" }, ["覆盖型号备注", (function () {
+      var note = el("textarea", { class: "fixed-note", rows: "4" }, [ul.modelsNote || ""]);
+      note.addEventListener("change", function () { ul.modelsNote = note.value; onChange(project); });
+      return note;
+    })()]));
+    box.append(dateField("签发日期", ul.issueDate, function (value) { ul.issueDate = value; onChange(project); }));
+    box.append(pathWithFile("证书路径", ul, "certificatePath", function () { onChange(project); }));
+    box.append(pathWithFile("报告路径", ul, "reportPath", function () { onChange(project); }));
+    box.append(pathWithFile("Follow-up Procedure 路径", ul, "followUpPath", function () { onChange(project); }));
+    var row = rows.filter(function (entry) { return entry.entry.id === "US-04"; })[0];
+    var linked = (ul.links || []).indexOf("US-04") !== -1;
+    var input = el("input", { type: "checkbox" });
+    input.checked = linked;
+    input.addEventListener("change", function () {
+      ul.links = input.checked ? ["US-04"] : [];
+      onChange(project);
+      refresh();
+    });
+    box.append(el("label", { class: "choice" }, [input, " 作为 US-04 UL 62368-1 的参考证据"]));
+    if (linked && row && ul.standardVersion) {
+      box.append(el("p", { class: "help" }, ["版本核对：" + root.ComplianceStore.versionGap({ standardVersion: ul.standardVersion }, row.entry)]));
+    }
+    box.append(renderHistory(project, ul, onChange, "UL", function (entry) {
+      ul.fileNo = entry.number || "";
+      ul.standardVersion = entry.standardVersion || "";
+      ul.certificatePath = entry.certificatePath || "";
+      ul.reportPath = entry.reportPath || "";
+    }));
+    return box;
+  }
+
+  function renderHistory(project, record, onChange, label, apply) {
+    var box = el("section", { id: label.toLowerCase() + "-history" }, [el("h3", {}, [label + " 履历"])]);
+    var draft = (record.history || []).some(function (item) { return !item.readonly; });
+    var add = el("button", { type: "button" }, ["新增 " + label + " 更新"]);
+    add.disabled = draft;
+    add.addEventListener("click", function () {
+      record.history = record.history || [];
+      record.history.push({
+        id: label.toLowerCase() + "-" + Date.now().toString(36),
+        updatedOn: "",
+        kind: "标准换版",
+        number: record.number || record.fileNo || "",
+        standardVersion: record.standardVersion || "",
+        summary: "",
+        certificatePath: record.certificatePath || "",
+        reportPath: record.reportPath || "",
+        readonly: false,
+      });
+      onChange(project);
+      refresh();
+    });
+    box.append(add);
+    (record.history || []).forEach(function (entry) {
+      if (entry.readonly) {
+        box.append(el("article", { class: "card" }, [
+          el("p", {}, [(entry.updatedOn || "日期未填") + " · " + entry.kind + " · " + (entry.number || "")]),
+          el("p", {}, ["标准版本：" + (entry.standardVersion || "未填")]),
+          el("p", { class: "fixed-note" }, [entry.summary || ""]),
+          el("p", { class: "path" }, [entry.certificatePath || ""]),
+          entry.certificatePath ? root.CompliancePaths.buttons(entry.certificatePath) : null,
+        ]));
+        return;
+      }
+      var kind = el("select");
+      ["标准换版", "产品迭代", "新增型号", "证书续期", "其他"].forEach(function (name) {
+        var option = el("option", { value: name }, [name]);
+        if (entry.kind === name) option.selected = true;
+        kind.append(option);
+      });
+      kind.addEventListener("change", function () { entry.kind = kind.value; onChange(project); });
+      var updatedOn = el("input", { type: "date", value: entry.updatedOn || "" });
+      updatedOn.addEventListener("change", function () { entry.updatedOn = updatedOn.value; onChange(project); });
+      var number = el("input", { type: "text", value: entry.number || "" });
+      number.addEventListener("change", function () { entry.number = number.value; onChange(project); });
+      var version = el("input", { type: "text", value: entry.standardVersion || "" });
+      version.addEventListener("change", function () { entry.standardVersion = version.value; onChange(project); });
+      var summary = el("textarea", { class: "fixed-note", rows: "4" }, [entry.summary || ""]);
+      summary.addEventListener("change", function () { entry.summary = summary.value; onChange(project); });
+      var cert = el("input", { type: "text", value: entry.certificatePath || "" });
+      cert.addEventListener("change", function () { entry.certificatePath = cert.value; onChange(project); });
+      var report = el("input", { type: "text", value: entry.reportPath || "" });
+      report.addEventListener("change", function () { entry.reportPath = report.value; onChange(project); });
+      var save = el("button", { type: "button" }, ["保存此更新"]);
+      save.addEventListener("click", function () {
+        apply(entry);
+        entry.readonly = true;
+        project.archive.changelog = project.archive.changelog || [];
+        project.archive.changelog.push({
+          date: entry.updatedOn || "",
+          kind: "标准",
+          summary: label + " 更新：" + (entry.kind || "") + " " + (entry.number || ""),
+          actions: entry.summary || "",
+        });
+        onChange(project);
+        refresh();
+      });
+      box.append(el("article", { class: "card" }, [
+        el("label", { class: "attr" }, ["更新日期", updatedOn]),
+        el("label", { class: "attr" }, ["更新类型", kind]),
+        el("label", { class: "attr" }, ["证书号/修订号", number]),
+        el("label", { class: "attr" }, ["标准版本", version]),
+        el("label", { class: "attr" }, ["简要说明", summary]),
+        el("label", { class: "attr" }, ["证书路径", cert]),
+        el("label", { class: "attr" }, ["报告路径", report]),
+        save,
+      ]));
+    });
+    return box;
+  }
+
   function renderCb(project, rows, onChange) {
     var cb = project.archive.basic.cb;
     var folder = "/合规知识库/02_产品/" + folderModel(project) + "/GEN/04ELEC_电气安全/";
@@ -996,14 +1191,16 @@
         onChange(project);
       }));
     });
-    box.append(textField("覆盖型号（顿号分隔）", (cb.modelsCovered || []).join("、"), function (value) {
-      cb.modelsCovered = value.split("、").map(function (part) { return part.trim(); }).filter(Boolean);
-      onChange(project);
-    }));
+    box.append(modelListEditor(cb, function () { onChange(project); }));
+    box.append(el("label", { class: "attr" }, ["覆盖型号备注", (function () {
+      var note = el("textarea", { class: "fixed-note", rows: "4" }, [cb.modelsNote || ""]);
+      note.addEventListener("change", function () { cb.modelsNote = note.value; onChange(project); });
+      return note;
+    })()]));
     box.append(dateField("签发日期", cb.issueDate, function (value) { cb.issueDate = value; onChange(project); }));
     box.append(dateField("有效期", cb.expiry, function (value) { cb.expiry = value; onChange(project); refresh(); }));
-    box.append(pathField("证书 Dropbox 路径", cb.certificatePath, function (value) { cb.certificatePath = value; onChange(project); }));
-    box.append(pathField("报告 Dropbox 路径", cb.reportPath, function (value) { cb.reportPath = value; onChange(project); }));
+    box.append(pathWithFile("证书路径", cb, "certificatePath", function () { onChange(project); }));
+    box.append(pathWithFile("报告路径", cb, "reportPath", function () { onChange(project); }));
     var targets = [
       ["EU-04", "EU LVD / EN IEC 62368-1"],
       ["CA-04", "CA CSA C22.2 No. 62368-1"],

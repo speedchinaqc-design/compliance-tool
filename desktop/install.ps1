@@ -32,3 +32,11 @@ New-Item -ItemType Directory -Force -Path $Start | Out-Null
 New-Link (Join-Path $Start "$Name.lnk")
 Write-Host "已安装到 $DestDir"
 Write-Host "桌面和开始菜单里可以找到「$Name」。数据在同目录的 data_local，更新时不会覆盖它。"
+Write-Host ""
+Write-Host "从报告提取关键件或材料保证书时，在本机安装："
+Write-Host "  pip install pdfplumber python-docx"
+Write-Host "扫描件还需要离线 OCR。任选一种："
+Write-Host "  1. 安装 Tesseract，并带上 chi_sim 和 eng：https://github.com/UB-Mannheim/tesseract/wiki"
+Write-Host "     然后再 pip install pytesseract pillow"
+Write-Host "  2. 或只装 pip install rapidocr-onnxruntime"
+Write-Host "没装 OCR 时，没有文字层的 PDF 会标成「需要识别」，不会上传文件。"
