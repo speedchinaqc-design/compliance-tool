@@ -11,8 +11,8 @@ EXTENSIONS = {".js", ".html", ".css", ".yaml", ".yml", ".py", ".md", ".json"}
 MOJIBAKE = ("\u00c3", "\u00c2", "\u00e6\u0153", "\u00e5\u00b8", "\u00e4\u00b8", "\u951f\u65a4\u62f7", "\u70eb\u70eb", "\u5c6f\u5c6f")
 REQUIRED = {
     "js/app.js": ("产品项目", "未选", "模块", "打开工作区"),
-    "js/login.js": ("登录", "index.html?v=1.3.1"),
-    "index.html": ("js/app.js?v=1.3.1", "js/home.js?v=1.3.1"),
+    "js/login.js": ("登录", "index.html?v=1.3.2"),
+    "index.html": ("js/app.js?v=1.3.2", "js/home.js?v=1.3.2"),
     "js/paths.js": ("打开本地文件夹", "在网页版 Dropbox 打开"),
     "js/archive.js": ("档案首页", "对比清单"),
     "js/store.js": ("26-005366-600", "非真实编号"),

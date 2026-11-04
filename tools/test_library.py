@@ -24,6 +24,7 @@ def main() -> None:
         made = create_product_folders(root, "UNI-8")
         assert made["created"] and (root / "02_产品" / "UNI-8" / "EU" / "08METRO_法制计量" / "readme.txt").is_file()
         assert (root / "02_产品" / "UNI-8" / "09_其他资料" / "待分类").is_dir()
+        assert (root / "02_产品" / "UNI-8" / "GEN" / "04ELEC_电气安全").is_dir()
         unsorted = root / "02_产品" / "UNI-8" / "09_其他资料" / "待分类" / "loose.pdf"
         unsorted.write_bytes(b"x")
         reference = root / "02_产品" / "UNI-8" / "09_其他资料" / "参考" / "UNI-8_GEN_00GEN_RPT_CB12345_20260301_v1.pdf"

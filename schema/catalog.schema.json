@@ -20,14 +20,14 @@
         },
         "modules": {
           "type": "array",
-          "minItems": 5,
-          "maxItems": 5,
+          "minItems": 6,
+          "maxItems": 6,
           "items": {
             "type": "object",
             "additionalProperties": false,
             "required": ["id", "summary"],
             "properties": {
-              "id": { "enum": ["电子产品", "电池", "CRA", "FCC/ISED", "计量"] },
+              "id": { "enum": ["电子产品", "电池", "CRA", "FCC/ISED", "计量", "CB 体系（IEC 62368-1）"] },
               "summary": { "type": "string", "minLength": 1 }
             }
           }

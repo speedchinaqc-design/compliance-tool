@@ -99,6 +99,8 @@ def create_product_folders(root: Path, model: str) -> dict:
     model = safe_model(model)
     dest = product_dir(root, model)
     if dest.exists():
+        if root.is_dir():
+            ensure_cb_folder(dest)
         return {"ok": True, "created": False, "path": str(dest), "note": "文件夹已经存在"}
     if not root.is_dir():
         return {"ok": False, "created": False, "path": str(dest), "note": "Dropbox 根目录不存在"}
@@ -106,17 +108,23 @@ def create_product_folders(root: Path, model: str) -> dict:
     if source.is_dir():
         shutil.copytree(source, dest)
         ensure_other_folders(dest)
+        ensure_cb_folder(dest)
         return {"ok": True, "created": True, "path": str(dest), "note": "已从 _新产品模板复制"}
     for market in MARKETS:
         for folder in FOLDER_BY_CODE.values():
             (dest / market / folder).mkdir(parents=True, exist_ok=True)
     ensure_other_folders(dest)
+    ensure_cb_folder(dest)
     return {"ok": True, "created": True, "path": str(dest), "note": "没有找到 _新产品模板，已按同样结构新建空文件夹"}
 
 
 def ensure_other_folders(dest: Path) -> None:
     for bucket in OTHER_BUCKETS:
         (dest / "09_其他资料" / bucket).mkdir(parents=True, exist_ok=True)
+
+
+def ensure_cb_folder(dest: Path) -> None:
+    (dest / "GEN" / "04ELEC_电气安全").mkdir(parents=True, exist_ok=True)
 
 
 def _inside(root: Path, path: Path) -> bool:

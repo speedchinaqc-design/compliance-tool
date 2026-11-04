@@ -41,7 +41,7 @@ function assert(cond, message) {
   if (!cond) throw new Error(message);
 }
 
-assert(data.modules.map((item) => item.id).join(",") === "电子产品,电池,CRA,FCC/ISED,计量", "模块目录不对");
+assert(data.modules.map((item) => item.id).join(",") === "电子产品,电池,CRA,FCC/ISED,计量,CB 体系（IEC 62368-1）", "模块目录不对");
 const tagged = data.markets.flatMap((market) => market.dimensions.flatMap((dim) => dim.entries));
 assert(tagged.length === 24, "仍然应是 24 条");
 assert(tagged.every((entry) => entry.modules && entry.modules.length), "每条都要有模块");
@@ -203,4 +203,30 @@ cell.reviews = { "CA-07": { status: "需要复核" } };
 assert(store.homeCellFlags(cell, ["CA-07"], [], []).indexOf("需要复核") !== -1);
 const soon = new Date(Date.now() + 10 * 86400000).toISOString().slice(0, 10);
 assert(store.homeCellFlags(cell, ["CA-07"], [], [{ requirementIds: ["CA-07"], expiry: soon }]).indexOf("即将过期") !== -1);
+
+const todoProject = store.uni8Project();
+todoProject.tests["CA-07"] = { status: store.WAIVER_STATUS, decider: "王敏", decidedOn: "2026-11-01", note: "先不做", expiry: "2027-01-01" };
+const sources = [
+  { key: "req:CA-07", kind: "checklist", sourceId: "CA-07", title: "CA-07 电池" },
+  { key: "req:EU-C01", kind: "checklist", sourceId: "EU-C01", title: "EU-C01 自定义 附加", removed: true },
+];
+assert(store.syncTodos(todoProject, sources) === true, "第一次应迁入旧测试");
+const migratedTodo = todoProject.todos.find((item) => item.key === "req:CA-07");
+assert(migratedTodo.conclusion === "不做" && migratedTodo.skipReason === "领导层决定", "领导层决定应迁成不做");
+assert(migratedTodo.decider === "王敏" && migratedTodo.expiry === "2027-01-01", "决定人和原到期日要留下");
+assert(todoProject.tests["CA-07"].status === store.WAIVER_STATUS, "旧 tests 字段不能删");
+assert(todoProject.todos.find((item) => item.key === "req:EU-C01").conclusion === "已取消");
+assert(store.syncTodos(todoProject, sources) === false, "待办同步应幂等");
+assert(store.isTestWaived(todoProject, "CA-07"), "迁完后仍算领导层决定");
+todoProject.customEntries = [{ id: "EU-C01", removed: true }];
+assert(store.nextCustomId(todoProject, "EU") === "EU-C02");
+const photos = store.normalizePhotoList(["/a.jpg", "", "/b.jpg"]);
+assert(photos.length === 2 && photos[0].typical && photos[0].path === "/a.jpg" && photos[1].path === "/b.jpg", "原三格照片应收成列表");
+const thumbs = store.blankArchive();
+thumbs.basic.thumbnail = "data:image/gif;base64,abc";
+delete thumbs.basic.thumbnails;
+assert(store.migrateVariants(thumbs) === true);
+assert(thumbs.basic.thumbnails.length === 1 && thumbs.basic.thumbnails[0].main && thumbs.basic.thumbnail.indexOf("base64") !== -1);
+const summary = store.overview(store.uni8Project());
+assert(summary.label.indexOf("已填 ") === 0 && summary.items.some((item) => item.text === "未填：CB 证书号"));
 console.log("project tests passed");

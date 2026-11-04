@@ -251,6 +251,29 @@
     return [0, 1, 2].map(function (index) { return String(list[index] || ""); });
   }
 
+  function normalizePhotoList(value) {
+    if (Array.isArray(value)) {
+      if (!value.length) return [];
+      if (value[0] && typeof value[0] === "object") {
+        var objects = value.map(function (item) {
+          return { path: String((item && item.path) || ""), typical: !!(item && item.typical) };
+        });
+        if (!objects.some(function (item) { return item.typical; }) && objects.length) objects[0].typical = true;
+        return objects;
+      }
+      var paths = value.map(function (item) { return String(item || "").trim(); }).filter(Boolean);
+      if (!paths.length) return [{ path: "", typical: true }];
+      return paths.map(function (path, index) { return { path: path, typical: index === 0 }; });
+    }
+    if (typeof value === "string" && value.trim()) return [{ path: value.trim(), typical: true }];
+    return [{ path: "", typical: true }];
+  }
+
+  function typicalPhoto(list) {
+    var photos = list || [];
+    return photos.filter(function (item) { return item && item.typical && item.path; })[0] || photos.filter(function (item) { return item && item.path; })[0] || null;
+  }
+
   function screenSummary(screens) {
     return (screens || []).map(function (item) {
       var type = String((item && item.type) || "").trim();
@@ -283,11 +306,11 @@
       model: "",
       screen: screenSummary(screens),
       screens: screens,
-      photos: ["", "", ""],
+      photos: [{ path: "", typical: true }],
       status: basic.status || "研发",
       statusNote: basic.statusNote || "",
       launchDates: emptyLaunchDates(basic.launchDates),
-      nameplatePhotos: ["", "", ""],
+      nameplatePhotos: [{ path: "", typical: true }],
       labelInfo: "",
     };
   }
@@ -300,11 +323,11 @@
       model: String(source.model || "").trim(),
       screen: screenSummary(screens),
       screens: screens,
-      photos: threePaths(source.photos),
+      photos: normalizePhotoList(source.photos),
       status: String(source.status || basic.status || "研发"),
       statusNote: source.statusNote != null ? String(source.statusNote) : String(basic.statusNote || ""),
       launchDates: emptyLaunchDates(source.launchDates || basic.launchDates),
-      nameplatePhotos: threePaths(source.nameplatePhotos),
+      nameplatePhotos: normalizePhotoList(source.nameplatePhotos),
       labelInfo: String(source.labelInfo || ""),
     };
   }
@@ -404,6 +427,62 @@
       changed = true;
     }
     basic.statusAggregate = aggregateStatus(basic);
+    if (normalizeThumbnails(basic)) changed = true;
+    if (normalizeCb(basic)) changed = true;
+    return changed;
+  }
+
+  function normalizeThumbnails(basic) {
+    var before = JSON.stringify(Array.isArray(basic.thumbnails) ? basic.thumbnails : []) + "|" + String(basic.thumbnail || "");
+    var list = [];
+    if (Array.isArray(basic.thumbnails)) {
+      basic.thumbnails.forEach(function (item) {
+        if (item && typeof item === "object" && item.url) list.push({ url: String(item.url), main: !!item.main });
+        else if (typeof item === "string" && item) list.push({ url: item, main: false });
+      });
+    }
+    if (!list.length && basic.thumbnail) list.push({ url: String(basic.thumbnail), main: true });
+    if (list.length && !list.some(function (item) { return item.main; })) list[0].main = true;
+    var chosen = -1;
+    list.forEach(function (item, index) { if (item.main && chosen < 0) chosen = index; });
+    list.forEach(function (item, index) { item.main = index === chosen; });
+    var main = chosen >= 0 ? list[chosen] : null;
+    basic.thumbnails = list;
+    basic.thumbnail = main ? main.url : "";
+    return before !== JSON.stringify(basic.thumbnails) + "|" + String(basic.thumbnail || "");
+  }
+
+  function blankCb() {
+    return {
+      number: "",
+      ncb: "",
+      lab: "",
+      standardVersion: "",
+      differences: { EU: "", CA: "", US: "" },
+      modelsCovered: [],
+      issueDate: "",
+      expiry: "",
+      certificatePath: "",
+      reportPath: "",
+      links: [],
+    };
+  }
+
+  function normalizeCb(basic) {
+    var source = basic.cb && typeof basic.cb === "object" ? basic.cb : {};
+    var next = blankCb();
+    ["number", "ncb", "lab", "standardVersion", "issueDate", "expiry", "certificatePath", "reportPath"].forEach(function (key) {
+      next[key] = String(source[key] || "");
+    });
+    next.differences = {
+      EU: String((source.differences && source.differences.EU) || ""),
+      CA: String((source.differences && source.differences.CA) || ""),
+      US: String((source.differences && source.differences.US) || ""),
+    };
+    next.modelsCovered = Array.isArray(source.modelsCovered) ? source.modelsCovered.map(function (item) { return String(item || "").trim(); }).filter(Boolean) : [];
+    next.links = Array.isArray(source.links) ? source.links.map(function (item) { return String(item || ""); }).filter(Boolean) : [];
+    var changed = JSON.stringify(basic.cb) !== JSON.stringify(next);
+    basic.cb = next;
     return changed;
   }
 
@@ -425,18 +504,43 @@
     return legacyVariantNames(basic.variants);
   }
 
+  function findReqTodo(project, id) {
+    return ((project && project.todos) || []).filter(function (item) {
+      return item && item.kind === "checklist" && (item.key === "req:" + id || item.sourceId === id);
+    })[0] || null;
+  }
+
   function isTestWaived(project, id) {
+    var todo = findReqTodo(project, id);
+    if (todo) return todo.conclusion === "不做" && todo.skipReason === "领导层决定";
     var test = project && project.tests && project.tests[id];
     return !!(test && test.status === WAIVER_STATUS);
   }
 
+  function skipsEvidence(project, id) {
+    var todo = findReqTodo(project, id);
+    if (todo) return todo.conclusion === "不做" || todo.conclusion === "已取消";
+    return isTestWaived(project, id);
+  }
+
   function waiverRecords(project) {
-    var tests = (project && project.tests) || {};
-    return Object.keys(tests).filter(function (id) {
-      return tests[id] && tests[id].status === WAIVER_STATUS;
-    }).map(function (id) {
-      var test = tests[id];
-      return {
+    var byId = {};
+    ((project && project.todos) || []).forEach(function (todo) {
+      if (!todo || todo.kind !== "checklist" || todo.conclusion !== "不做" || todo.skipReason !== "领导层决定") return;
+      var id = todo.sourceId || String(todo.key || "").replace(/^req:/, "");
+      byId[id] = {
+        id: id,
+        decider: todo.decider || "",
+        decidedOn: todo.decidedOn || "",
+        note: todo.note || "",
+        complete: !!(todo.decider && todo.decidedOn),
+      };
+    });
+    Object.keys((project && project.tests) || {}).forEach(function (id) {
+      if (byId[id]) return;
+      var test = project.tests[id];
+      if (!test || test.status !== WAIVER_STATUS) return;
+      byId[id] = {
         id: id,
         decider: test.decider || "",
         decidedOn: test.decidedOn || "",
@@ -444,6 +548,7 @@
         complete: !!(test.decider && test.decidedOn),
       };
     });
+    return Object.keys(byId).map(function (id) { return byId[id]; });
   }
 
   function countsAsMissing(project, item) {
@@ -459,7 +564,7 @@
     var missingCompare = (comparisons || []).some(function (item) { return countsAsMissing(project, item); });
     var gap = (comparisons || []).some(function (item) { return item.status === "差距"; });
     var uncovered = list.filter(function (id) {
-      return !evidenced[id] && !isTestWaived(project, id);
+      return !evidenced[id] && !skipsEvidence(project, id);
     });
     var lack = missingCompare || uncovered.length > 0;
     var flags = [];
@@ -477,15 +582,171 @@
     return flags;
   }
 
+  function blankTodo(source) {
+    return {
+      key: source.key,
+      kind: source.kind,
+      sourceId: source.sourceId,
+      title: source.title || "",
+      conclusion: "待定",
+      skipReason: "",
+      note: "",
+      decider: "",
+      decidedOn: "",
+      owner: "",
+      due: "",
+      progress: "未开始",
+      evidenceIds: [],
+      expiry: "",
+      priorConclusion: "",
+      cancelReason: "",
+      legacy: null,
+    };
+  }
+
+  function todoFromLegacy(id, test) {
+    var item = blankTodo({ key: "req:" + id, kind: "checklist", sourceId: id, title: id });
+    test = test || {};
+    item.legacy = {
+      status: test.status || "",
+      expiry: test.expiry || "",
+      note: test.note || "",
+      decider: test.decider || "",
+      decidedOn: test.decidedOn || "",
+    };
+    item.note = test.note || "";
+    item.decider = test.decider || "";
+    item.decidedOn = test.decidedOn || "";
+    item.expiry = test.expiry || "";
+    if (test.status === WAIVER_STATUS) {
+      item.conclusion = "不做";
+      item.skipReason = "领导层决定";
+    } else if (test.status === "未开始" || test.status === "进行中" || test.status === "已完成") {
+      item.conclusion = "要做";
+      item.progress = test.status;
+    } else {
+      item.conclusion = "待定";
+    }
+    return item;
+  }
+
+  function syncTodos(project, sources) {
+    if (!project) return [];
+    if (!Array.isArray(project.todos)) project.todos = [];
+    var changed = false;
+    if (!project.testsMigrated) {
+      Object.keys(project.tests || {}).forEach(function (id) {
+        var key = "req:" + id;
+        if (project.todos.some(function (item) { return item.key === key; })) return;
+        project.todos.push(todoFromLegacy(id, project.tests[id]));
+        changed = true;
+      });
+      project.testsMigrated = true;
+      changed = true;
+    }
+    var active = {};
+    (sources || []).forEach(function (source) {
+      active[source.key] = source;
+      var existing = project.todos.filter(function (item) { return item.key === source.key; })[0];
+      if (!existing) {
+        existing = blankTodo(source);
+        project.todos.push(existing);
+        changed = true;
+      }
+      if (existing.title !== source.title || existing.kind !== source.kind || existing.sourceId !== source.sourceId) {
+        existing.title = source.title;
+        existing.kind = source.kind;
+        existing.sourceId = source.sourceId;
+        changed = true;
+      }
+      if (source.removed || source.na) {
+        if (existing.conclusion !== "已取消") {
+          existing.priorConclusion = existing.conclusion;
+          existing.conclusion = "已取消";
+          existing.cancelReason = source.removed ? "来源已删除" : "不适用";
+          changed = true;
+        }
+      } else if (existing.conclusion === "已取消" && existing.cancelReason && existing.priorConclusion) {
+        existing.conclusion = existing.priorConclusion;
+        existing.priorConclusion = "";
+        existing.cancelReason = "";
+        changed = true;
+      }
+    });
+    project.todos.forEach(function (todo) {
+      if (active[todo.key] || todo.conclusion === "已取消") return;
+      todo.priorConclusion = todo.conclusion;
+      todo.conclusion = "已取消";
+      todo.cancelReason = "来源已不在当前清单";
+      changed = true;
+    });
+    return changed;
+  }
+
+  function todoCounts(todos) {
+    var counts = { pending: 0, doing: 0, overdue: 0 };
+    (todos || []).forEach(function (item) {
+      if (!item || item.conclusion === "已取消") return;
+      if (item.conclusion === "待定") counts.pending += 1;
+      if (item.conclusion === "要做" && item.progress === "进行中") counts.doing += 1;
+      if (item.conclusion === "要做" && item.progress !== "已完成" && item.due && daysUntil(item.due) != null && daysUntil(item.due) < 0) counts.overdue += 1;
+    });
+    return counts;
+  }
+
+  function nextCustomId(project, market) {
+    var prefix = String(market || "EU") + "-C";
+    var next = 1;
+    (project.customEntries || []).forEach(function (item) {
+      var match = new RegExp("^" + prefix + "(\\d+)$").exec(item.id || "");
+      if (match) next = Math.max(next, Number(match[1]) + 1);
+    });
+    return prefix + (next < 10 ? "0" + next : String(next));
+  }
+
+  function overview(project) {
+    ensureArchive(project);
+    var archive = project.archive;
+    var basic = archive.basic;
+    var items = [];
+    function add(id, label, filled, section) {
+      var ok = !!filled;
+      items.push({ id: id, label: label, filled: ok, section: section, text: ok ? label : "未填：" + label });
+    }
+    var variants = filledVariants(basic);
+    if (!variants.length) add("variants", "变体型号", false, "basic");
+    variants.forEach(function (row) {
+      var name = row.model;
+      add("screen-" + name, name + " 屏幕尺寸", screenSummary(row.screens), "basic");
+      add("status-" + name, name + " 状态", row.status, "basic");
+      add("eu-" + name, name + " EU 上市日期", row.launchDates && row.launchDates.EU, "basic");
+      add("ca-" + name, name + " CA 上市日期", row.launchDates && row.launchDates.CA, "basic");
+      add("us-" + name, name + " US 上市日期", row.launchDates && row.launchDates.US, "basic");
+      add("label-" + name, name + " 铭牌标签", row.labelInfo, "labels");
+      add("photo-" + name, name + " 典型照片", typicalPhoto(row.photos), "basic");
+    });
+    var parties = archive.parties || {};
+    Object.keys(parties).forEach(function (key) {
+      add("party-" + key, partyLabel(key), parties[key] && parties[key].dropboxPath, "parties");
+    });
+    add("cb", "CB 证书号", archive.basic.cb && archive.basic.cb.number, "cb");
+    add("bom", "关键件", (archive.bom || []).length, "bom");
+    add("evidence", "证据", (archive.evidence || []).length, "evidence");
+    var filled = items.filter(function (item) { return item.filled; }).length;
+    return { items: items, filled: filled, total: items.length, label: "已填 " + filled + " / " + items.length + " 项" };
+  }
+
   function blankArchive() {
     var basicSeed = {
       model: "",
       variants: [],
       photoPath: "",
       thumbnail: "",
+      thumbnails: [],
       status: "研发",
       statusNote: "",
       launchDates: { EU: "", CA: "", US: "" },
+      cb: blankCb(),
     };
     basicSeed.variantRows = [0, 1, 2, 3, 4, 5].map(function () { return emptyVariantRow(basicSeed); });
     basicSeed.statusAggregate = "未上市";
@@ -923,7 +1184,16 @@
     waiverRecords: waiverRecords,
     countsAsMissing: countsAsMissing,
     screenSummary: screenSummary,
+    normalizePhotoList: normalizePhotoList,
+    typicalPhoto: typicalPhoto,
     homeCellFlags: homeCellFlags,
+    syncTodos: syncTodos,
+    todoCounts: todoCounts,
+    todoFromLegacy: todoFromLegacy,
+    nextCustomId: nextCustomId,
+    overview: overview,
+    skipsEvidence: skipsEvidence,
+    blankCb: blankCb,
     WAIVER_STATUS: WAIVER_STATUS,
     blankArchive: blankArchive,
     sampleArchive: sampleArchive,

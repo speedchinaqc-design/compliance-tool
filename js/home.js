@@ -14,6 +14,11 @@
     var pending = [];
     var reviews = [];
     projects.forEach(function (project) {
+      var cb = project.archive && project.archive.basic && project.archive.basic.cb;
+      if (cb && cb.expiry) {
+        var cbDays = root.ComplianceStore.daysUntil(cb.expiry);
+        if (cbDays != null && cbDays <= 90) expiring.push(project.name + " · CB " + (cb.number || "证书") + " · " + cb.expiry + (cbDays <= 30 ? "（30 天内）" : ""));
+      }
       ((project.archive && project.archive.evidence) || []).forEach(function (item) {
         var days = root.ComplianceStore.daysUntil(item.expiry);
         if (days != null && days <= 90) expiring.push(project.name + " · " + (item.reportNo || item.type) + " · " + item.expiry + (days <= 30 ? "（30 天内）" : ""));

@@ -15,3 +15,5 @@ modules:
   summary: 美国 FCC 与加拿大 ISED 的无线和 EMC 授权。欧盟的无线与 EMC 仍放在「电子产品」。
 - id: 计量
   summary: 贸易结算用法制计量。欧盟 NAWI、加拿大 Measurement Canada、美国 NIST/NTEP，均来自现有矩阵。
+- id: CB 体系（IEC 62368-1）
+  summary: 记录 IEC 62368-1 的 CB 证书，作为已有欧盟 EN IEC 62368-1、加拿大 CSA C22.2 No. 62368-1、美国 UL 62368-1 条目的参考证据。不新增法规，证书文件放在 GEN/04ELEC_电气安全。

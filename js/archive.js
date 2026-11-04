@@ -19,6 +19,7 @@
     ["issues", "问题与纠正"],
     ["letters", "官方往来"],
     ["changes", "变更记录"],
+    ["cb", "CB 体系"],
     ["other", "其他资料"],
   ];
   var STATUSES = ["研发", "送测", "已上市", "停产"];
@@ -57,6 +58,7 @@
     if (section === "issues") page.append(renderIssues(project, onChange));
     if (section === "letters") page.append(renderLetters(project, onChange));
     if (section === "changes") page.append(renderChanges(project, onChange));
+    if (section === "cb") page.append(renderCb(project, rows, onChange));
     if (section === "other") page.append(renderOther(project));
     host.append(page);
   }
@@ -116,6 +118,18 @@
         var gap = root.ComplianceStore.versionGap(item, row.entry);
         if (gap === "版本可能不一致") lines.push(id + "：" + gap + "（证据 " + item.standardVersion + "）");
       });
+    });
+    var cb = project.archive.basic && project.archive.basic.cb;
+    if (cb && cb.expiry) {
+      var cbDays = root.ComplianceStore.daysUntil(cb.expiry);
+      if (cbDays != null && cbDays <= 30) lines.push("CB 证书 30 天内或已到期：" + (cb.number || "未填证书号") + " · " + cb.expiry);
+      else if (cbDays != null && cbDays <= 90) lines.push("CB 证书 90 天内到期：" + (cb.number || "未填证书号") + " · " + cb.expiry);
+    }
+    ((cb && cb.links) || []).forEach(function (id) {
+      var linked = rows.filter(function (entry) { return entry.entry.id === id; })[0];
+      if (!linked || !cb.standardVersion) return;
+      var cbGap = root.ComplianceStore.versionGap({ standardVersion: cb.standardVersion }, linked.entry);
+      if (cbGap === "版本可能不一致") lines.push(id + "：CB 标准版本" + cbGap + "（" + cb.standardVersion + "）");
     });
     var box = el("div", { id: "archive-alerts", class: lines.length ? "note" : "help" });
     box.append(el("p", {}, [lines.length ? "档案提醒" : "档案提醒：没有 90 天内的到期项。已过的法规日期仍会列在下面。"]));
@@ -317,7 +331,10 @@
     var waivers = root.ComplianceStore.waiverRecords(project).map(function (item) {
       return requirementTitle(rows, item.id) + " · 决定人 " + (item.decider || "未填") + " · " + (item.decidedOn || "日期未填") + (item.note ? " · " + item.note : "");
     });
+    var counts = root.ComplianceStore.todoCounts(project.todos);
     return el("div", {}, [
+      renderOverview(project),
+      el("p", { id: "todo-counts" }, ["产品测试：待定 " + counts.pending + " · 进行中 " + counts.doing + " · 逾期 " + counts.overdue]),
       el("p", { id: "product-status", class: "note" }, ["产品状态：" + aggregate + "。由各变体是否「已上市」汇总，主型号本身不是变体。"]),
       waivers.length ? el("p", { class: "help" }, ["领导层决定先不做测试（不计入缺失证据）：" + waivers.join("；")]) : null,
       el("h3", {}, ["市场 × 模块"]),
@@ -417,22 +434,89 @@
     return box;
   }
 
-  function photoEditors(paths, onCommit) {
+  function photoListEditors(list, onCommit) {
+    if (!Array.isArray(list)) return el("div");
     var stack = el("div", { class: "photo-stack" });
-    [0, 1, 2].forEach(function (index) {
-      stack.append(pathField("照片 " + (index + 1), paths[index], function (value) {
-        paths[index] = value;
+    list.forEach(function (item, index) {
+      stack.append(pathField("照片 " + (index + 1), item.path, function (value) {
+        item.path = value;
+        if (!list.some(function (photo) { return photo.typical; })) item.typical = true;
         onCommit();
       }));
-      stack.append(localThumb(paths[index]));
+      if (item.path) stack.append(localThumb(item.path));
+      var typical = el("button", { type: "button", class: item.typical ? "" : "ghost" }, [item.typical ? "典型照片" : "设为典型照片"]);
+      typical.addEventListener("click", function () {
+        list.forEach(function (photo) { photo.typical = false; });
+        item.typical = true;
+        onCommit();
+      });
+      var del = el("button", { type: "button", class: "ghost" }, ["删除"]);
+      del.addEventListener("click", function () {
+        list.splice(index, 1);
+        if (list.length && !list.some(function (photo) { return photo.typical; })) list[0].typical = true;
+        onCommit();
+      });
+      stack.append(el("div", { class: "wizard-bar" }, [typical, del]));
     });
+    var add = el("button", { type: "button", class: "ghost" }, ["增加照片"]);
+    add.addEventListener("click", function () {
+      list.push({ path: "", typical: !list.some(function (photo) { return photo.typical; }) });
+      onCommit();
+    });
+    stack.append(add);
     return stack;
+  }
+
+  function renderOverview(project) {
+    var data = root.ComplianceStore.overview(project);
+    var box = el("section", { id: "product-overview", class: "card" }, [
+      el("h3", {}, ["产品信息总览"]),
+      el("p", { id: "overview-count" }, [data.label]),
+    ]);
+    var missing = data.items.filter(function (item) { return !item.filled; });
+    if (missing.length) {
+      var list = el("ul", { id: "overview-missing" });
+      missing.forEach(function (item) {
+        var button = el("button", { type: "button", class: "ghost missing" }, [item.text]);
+        button.addEventListener("click", function () { openSection(item.section); });
+        list.append(el("li", {}, [button]));
+      });
+      box.append(list);
+    }
+    root.ComplianceStore.filledVariants(project.archive.basic).forEach(function (row) {
+      var summary = root.ComplianceStore.screenSummary(row.screens) || "屏幕未填";
+      var dates = "EU " + ((row.launchDates && row.launchDates.EU) || "未填") + " · CA " + ((row.launchDates && row.launchDates.CA) || "未填") + " · US " + ((row.launchDates && row.launchDates.US) || "未填");
+      var openBasic = el("button", { type: "button", class: "ghost" }, [row.model + " · " + summary + " · " + (row.status || "状态未填") + " · " + dates]);
+      openBasic.addEventListener("click", function () { openSection("basic"); });
+      var openLabel = el("button", { type: "button", class: row.labelInfo ? "ghost" : "ghost missing" }, ["铭牌标签：" + (row.labelInfo || "未填")]);
+      openLabel.addEventListener("click", function () { openSection("labels"); });
+      box.append(el("div", { class: "wizard-bar" }, [openBasic, openLabel]));
+    });
+    var cb = (project.archive.basic && project.archive.basic.cb) || {};
+    function jump(label, target, warn) {
+      var button = el("button", { type: "button", class: warn ? "ghost missing" : "ghost" }, [label]);
+      button.addEventListener("click", function () { openSection(target); });
+      return button;
+    }
+    box.append(el("div", { class: "wizard-bar" }, [
+      jump("责任主体", "parties", false),
+      jump("CB 证书号：" + (cb.number || "未填"), "cb", !cb.number),
+      jump("关键件 " + ((project.archive.bom || []).length), "bom", !(project.archive.bom || []).length),
+      jump("证据 " + ((project.archive.evidence || []).length), "evidence", !(project.archive.evidence || []).length),
+    ]));
+    return box;
+  }
+
+  function openSection(name) {
+    section = name || "home";
+    refresh();
   }
 
   function renderBasic(project, onChange) {
     var basic = project.archive.basic;
     root.ComplianceStore.migrateVariants(project.archive);
     var box = el("div", { class: "card", id: "basic-info" }, [
+      renderOverview(project),
       textField("名称", project.name, function (value) {
         project.name = value || project.name;
         onChange(project);
@@ -449,12 +533,18 @@
     var body = el("tbody");
     (basic.variantRows || []).forEach(function (row, index) {
       body.append(el("tr", {}, [
-        el("td", {}, [textField("变体型号", row.model, function (value) {
-          row.model = value.trim();
-          commitVariants(project, onChange, true);
-        })]),
+        el("td", {}, [
+          textField("变体型号", row.model, function (value) {
+            row.model = value.trim();
+            commitVariants(project, onChange, true);
+          }),
+          (function () {
+            var typical = root.ComplianceStore.typicalPhoto(row.photos);
+            return typical ? localThumb(typical.path) : el("p", { class: "help" }, ["还没有典型照片。"]);
+          })(),
+        ]),
         el("td", {}, [screenEditors(row, function (rerender) { commitVariants(project, onChange, !!rerender); })]),
-        el("td", {}, [photoEditors(row.photos, function () { commitVariants(project, onChange, true); })]),
+        el("td", {}, [photoListEditors(row.photos, function () { commitVariants(project, onChange, true); })]),
         el("td", {}, [removeButton(function () {
           basic.variantRows.splice(index, 1);
           commitVariants(project, onChange, true);
@@ -506,20 +596,51 @@
     });
     statusTable.append(el("thead", {}, [statusHead]), statusBody);
     box.append(el("div", { class: "table-scroll" }, [statusTable]));
-    var file = el("input", { type: "file", accept: "image/*", id: "thumb-file" });
+    var file = el("input", { type: "file", accept: "image/*", id: "thumb-file", multiple: "multiple" });
     file.addEventListener("change", function () {
-      var picked = file.files && file.files[0];
-      if (!picked) return;
-      shrinkImage(picked, function (url) {
-        basic.thumbnail = url || "";
-        onChange(project);
-        var note = box.querySelector(".thumb-note");
-        if (note) note.textContent = url ? "已保存小缩略图（只在本机）。" : "图片太大，没有保存。请改用 Dropbox 路径。";
+      var files = file.files ? Array.prototype.slice.call(file.files) : [];
+      var pending = files.length;
+      if (!pending) return;
+      basic.thumbnails = basic.thumbnails || [];
+      files.forEach(function (picked) {
+        shrinkImage(picked, function (url) {
+          pending -= 1;
+          if (url) basic.thumbnails.push({ url: url, main: !basic.thumbnails.some(function (item) { return item.main; }) });
+          if (pending === 0) {
+            var main = basic.thumbnails.filter(function (item) { return item.main; })[0];
+            basic.thumbnail = main ? main.url : "";
+            onChange(project);
+            refresh();
+          }
+        });
       });
     });
-    box.append(el("label", { class: "attr" }, ["或为主型号选择一张小缩略图（不上传）", file]));
-    box.append(el("p", { class: "help thumb-note" }, [basic.thumbnail ? "本机已有缩略图。" : "未存缩略图。"]));
-    if (basic.thumbnail) box.append(el("img", { src: basic.thumbnail, alt: "产品缩略图", class: "thumb" }));
+    box.append(el("label", { class: "attr" }, ["为主型号选择小缩略图（不上传，可多选）", file]));
+    box.append(el("p", { class: "help thumb-note" }, [(basic.thumbnails || []).length ? "缩略图只存在本机，不会上传。" : "未存缩略图。"]));
+    var gallery = el("div", { id: "main-thumbs", class: "wizard-bar" });
+    (basic.thumbnails || []).forEach(function (item, index) {
+      var card = el("div", { class: "card" }, [el("img", { src: item.url, alt: "主型号缩略图", class: "thumb" })]);
+      var pick = el("button", { type: "button", class: item.main ? "" : "ghost" }, [item.main ? "主图" : "设为主图"]);
+      pick.addEventListener("click", function () {
+        basic.thumbnails.forEach(function (thumb) { thumb.main = false; });
+        item.main = true;
+        basic.thumbnail = item.url;
+        onChange(project);
+        refresh();
+      });
+      var del = el("button", { type: "button", class: "ghost" }, ["删除"]);
+      del.addEventListener("click", function () {
+        basic.thumbnails.splice(index, 1);
+        if (basic.thumbnails.length && !basic.thumbnails.some(function (thumb) { return thumb.main; })) basic.thumbnails[0].main = true;
+        var main = basic.thumbnails.filter(function (thumb) { return thumb.main; })[0];
+        basic.thumbnail = main ? main.url : "";
+        onChange(project);
+        refresh();
+      });
+      card.append(pick, del);
+      gallery.append(card);
+    });
+    box.append(gallery);
     return box;
   }
 
@@ -716,7 +837,7 @@
       });
       body.append(el("tr", {}, [
         el("td", {}, [row.model]),
-        el("td", {}, [photoEditors(row.nameplatePhotos, function () { commitVariants(project, onChange, true); })]),
+        el("td", {}, [photoListEditors(row.nameplatePhotos, function () { commitVariants(project, onChange, true); })]),
         el("td", {}, [el("label", { class: "attr" }, ["标签信息", info])]),
       ]));
     });
@@ -853,6 +974,62 @@
     }).catch(function () {});
   }
 
+  function renderCb(project, rows, onChange) {
+    var cb = project.archive.basic.cb;
+    var folder = "/合规知识库/02_产品/" + folderModel(project) + "/GEN/04ELEC_电气安全/";
+    var box = el("div", { id: "cb-record", class: "card" }, [
+      el("h3", {}, ["CB 体系（IEC 62368-1）"]),
+      el("p", { class: "help" }, ["这不是新的法规条目。证书和报告作为 EU-04、CA-04、US-04 里已有 62368-1 要求的参考证据。文件放在 GEN/04ELEC_电气安全，不把内容抄进仓库。"]),
+      el("p", { class: "path" }, [folder]),
+      root.CompliancePaths.buttons(folder),
+    ]);
+    function text(label, key) {
+      box.append(textField(label, cb[key], function (value) { cb[key] = value; onChange(project); }));
+    }
+    text("CB 证书号", "number");
+    text("NCB", "ncb");
+    text("测试实验室", "lab");
+    text("标准版本", "standardVersion");
+    ["EU", "CA", "US"].forEach(function (code) {
+      box.append(textField(code + " 国家差异", cb.differences[code], function (value) {
+        cb.differences[code] = value;
+        onChange(project);
+      }));
+    });
+    box.append(textField("覆盖型号（顿号分隔）", (cb.modelsCovered || []).join("、"), function (value) {
+      cb.modelsCovered = value.split("、").map(function (part) { return part.trim(); }).filter(Boolean);
+      onChange(project);
+    }));
+    box.append(dateField("签发日期", cb.issueDate, function (value) { cb.issueDate = value; onChange(project); }));
+    box.append(dateField("有效期", cb.expiry, function (value) { cb.expiry = value; onChange(project); refresh(); }));
+    box.append(pathField("证书 Dropbox 路径", cb.certificatePath, function (value) { cb.certificatePath = value; onChange(project); }));
+    box.append(pathField("报告 Dropbox 路径", cb.reportPath, function (value) { cb.reportPath = value; onChange(project); }));
+    var targets = [
+      ["EU-04", "EU LVD / EN IEC 62368-1"],
+      ["CA-04", "CA CSA C22.2 No. 62368-1"],
+      ["US-04", "US UL 62368-1"],
+    ];
+    box.append(el("p", {}, ["可作为参考证据连到这些已有条目："]));
+    targets.forEach(function (pair) {
+      var input = el("input", { type: "checkbox" });
+      input.checked = (cb.links || []).indexOf(pair[0]) !== -1;
+      input.addEventListener("change", function () {
+        var links = (cb.links || []).filter(function (id) { return id !== pair[0]; });
+        if (input.checked) links.push(pair[0]);
+        cb.links = links;
+        onChange(project);
+        refresh();
+      });
+      var row = rows.filter(function (entry) { return entry.entry.id === pair[0]; })[0];
+      var note = row ? requirementTitle(rows, pair[0]) : pair[1];
+      box.append(el("label", { class: "choice" }, [input, " " + note]));
+      if (input.checked && row && cb.standardVersion) {
+        box.append(el("p", { class: "help" }, ["版本核对：" + root.ComplianceStore.versionGap({ standardVersion: cb.standardVersion }, row.entry)]));
+      }
+    });
+    return box;
+  }
+
   function renderOther(project) {
     loadOther(project);
     var other = (project._files && project._files.other) || {};
@@ -986,7 +1163,7 @@
     sheets.push({
       name: "变体",
       rows: [["产品状态", pack.statusAggregate || ""]].concat([["变体型号", "屏幕尺寸", "状态", "状态说明", "EU 上市日期", "CA 上市日期", "US 上市日期", "标签信息", "照片", "铭牌照片"]]).concat((pack.variants || []).map(function (row) {
-        return [row.model, row.screen, row.status, row.statusNote, row.launchDates.EU, row.launchDates.CA, row.launchDates.US, row.labelInfo, (row.photos || []).join("；"), (row.nameplatePhotos || []).join("；")];
+        return [row.model, row.screen, row.status, row.statusNote, row.launchDates.EU, row.launchDates.CA, row.launchDates.US, row.labelInfo, (row.photos || []).map(function (item) { return item.path || item; }).join("；"), (row.nameplatePhotos || []).map(function (item) { return item.path || item; }).join("；")];
       })),
     });
     sheets.push({

@@ -79,13 +79,14 @@
     ]),
   ];
 
+  var MODULE_IDS = ["电子产品", "电池", "CRA", "FCC/ISED", "计量", "CB 体系（IEC 62368-1）"];
   var WIDGETS = [
-    { id: "checklist", title: "合规清单", modules: ["电子产品", "电池", "CRA", "FCC/ISED", "计量"], text: "按所选市场、模块和问答生成适用条目。" },
-    { id: "modules", title: "模块", modules: ["电子产品", "电池", "CRA", "FCC/ISED", "计量"], text: "显示这一产品勾选的模块，以及各模块在矩阵里的范围。" },
-    { id: "documents", title: "文件模板", modules: ["电子产品", "电池", "CRA", "FCC/ISED", "计量"], text: "DoC、技术文件目录、风险评估；勾选 CRA 时加上漏洞处理政策。" },
-    { id: "labels", title: "标签模板", modules: ["电子产品", "电池", "CRA", "FCC/ISED", "计量"], text: "CE、FCC Class A、ISED、计量标志、电池警示的空表，正文待确认。" },
-    { id: "tests", title: "产品测试与证书到期", modules: ["电子产品", "电池", "CRA", "FCC/ISED", "计量"], text: "每条适用要求一条测试进度，可填证书到期日。" },
-    { id: "ai", title: "AI判断结果导入", modules: ["电子产品", "电池", "CRA", "FCC/ISED", "计量"], text: "本工具不做判断。把说明书发给 Dan Bot 后，再导入结果文件。" },
+    { id: "checklist", title: "合规清单", modules: MODULE_IDS, text: "按所选市场、模块和问答生成适用条目。末尾可以增加自定义条目。" },
+    { id: "modules", title: "模块", modules: MODULE_IDS, text: "显示这一产品勾选的模块，以及各模块在矩阵里的范围。" },
+    { id: "documents", title: "文件模板", modules: MODULE_IDS, text: "DoC、技术文件目录、风险评估；勾选 CRA 时加上漏洞处理政策。" },
+    { id: "labels", title: "标签模板", modules: MODULE_IDS, text: "CE、FCC Class A、ISED、计量标志、电池警示的空表，正文待确认。" },
+    { id: "tests", title: "产品测试", modules: MODULE_IDS, text: "由合规清单、文件模板和标签模板生成待办。结论分为要做、不做和待定。" },
+    { id: "ai", title: "AI判断结果导入", modules: MODULE_IDS, text: "本工具不做判断。把说明书发给 Dan Bot 后，再导入结果文件。" },
   ];
 
   function overlaps(left, right) {

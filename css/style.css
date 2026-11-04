@@ -417,6 +417,14 @@ a.button-link {
 
 .archive-filter .choice { margin: 4px 0; }
 
+.missing { color: #8d2f2f; }
+
+button.missing { color: #8d2f2f; border-color: #8d2f2f; }
+
+#overview-missing { margin: 8px 0; padding-left: 1.2rem; }
+
+#main-thumbs .card { padding: 8px; }
+
 @media print {
   body.print-archive .top,
   body.print-archive .banner,
