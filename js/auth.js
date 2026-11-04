@@ -40,18 +40,39 @@
     return diff === 0;
   }
 
+  function storeSnapshot() {
+    if (!root.ComplianceLocal || !root.ComplianceLocal.snapshot()) return null;
+    return root.ComplianceLocal.snapshot();
+  }
+
   function readRecord() {
-    try {
-      var raw = root.localStorage.getItem(RECORD_KEY);
-      if (!raw) return null;
-      var data = JSON.parse(raw);
-      if (!data || data.algo !== "PBKDF2-SHA-256") return null;
-      if (!data.username || !data.salt || !data.hash) return null;
-      if (data.iterations !== ITERATIONS) return null;
-      return data;
-    } catch (err) {
-      return null;
+    var live = storeSnapshot();
+    var data = live ? live.account : null;
+    if (!data) {
+      try {
+        var raw = root.localStorage.getItem(RECORD_KEY);
+        if (!raw) return null;
+        data = JSON.parse(raw);
+      } catch (err) {
+        return null;
+      }
     }
+    if (!data || data.algo !== "PBKDF2-SHA-256") return null;
+    if (!data.username || !data.salt || !data.hash) return null;
+    if (data.iterations !== ITERATIONS) return null;
+    return data;
+  }
+
+  function writeRecord(record) {
+    var live = storeSnapshot();
+    if (live) {
+      live.account = record;
+      return root.ComplianceLocal.persist();
+    }
+    try {
+      root.localStorage.setItem(RECORD_KEY, JSON.stringify(record));
+    } catch (err) { /* 测试环境或隐私模式 */ }
+    return Promise.resolve(record);
   }
 
   function derive(password, salt, iterations) {
@@ -108,9 +129,10 @@
         iterations: ITERATIONS,
         algo: "PBKDF2-SHA-256",
       };
-      root.localStorage.setItem(RECORD_KEY, JSON.stringify(record));
-      startSession(name);
-      return name;
+      return writeRecord(record).then(function () {
+        startSession(name);
+        return name;
+      });
     });
   }
 
@@ -136,14 +158,17 @@
   function clearLocalData() {
     try {
       root.localStorage.clear();
-    } catch (err) {
-      /* ignore */
-    }
+    } catch (err) { /* ignore */ }
     try {
       root.sessionStorage.clear();
-    } catch (err) {
-      /* ignore */
+    } catch (err) { /* ignore */ }
+    var live = storeSnapshot();
+    if (live) {
+      live.account = null;
+      live.projects = [];
+      return root.ComplianceLocal.persist();
     }
+    return Promise.resolve();
   }
 
   root.ComplianceAuth = {

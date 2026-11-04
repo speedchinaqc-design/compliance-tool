@@ -94,7 +94,7 @@
     "knowledge_base": {
       "root": "/合规知识库",
       "folder_template": "/合规知识库/02_产品/{model}/{market}/{dimension_code}/",
-      "filename_template": "{model}_{market}_{dimension_code}_{type}_{number}_{issue_date}_{version}.pdf",
+      "filename_template": "{model}_{market}_{dimension_short}_{type}_{number}_{issue_date}_{version}.pdf",
       "filename_example": "UNI-8_EU_08METRO_CERT_TC1234_20260115_v1.pdf",
       "filename_example_note": "规划书里的命名举例，不是真实证书。",
       "matrix_key_template": "{market}-{dimension_number}",

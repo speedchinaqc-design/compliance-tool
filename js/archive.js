@@ -19,6 +19,7 @@
     ["issues", "问题与纠正"],
     ["letters", "官方往来"],
     ["changes", "变更记录"],
+    ["other", "其他资料"],
   ];
   var STATUSES = ["研发", "送测", "已上市", "停产"];
   var EVIDENCE_TYPES = ["测试报告", "证书", "DoC", "标签照片", "说明书", "技术文件", "注册文件", "合规文档", "往来函件"];
@@ -27,6 +28,7 @@
 
   function render(host, project, rows, onChange) {
     root.ComplianceStore.ensureArchive(project);
+    loadOther(project);
     var archive = project.archive;
     host.replaceChildren();
     var page = el("div", { id: "product-archive" });
@@ -55,7 +57,15 @@
     if (section === "issues") page.append(renderIssues(project, onChange));
     if (section === "letters") page.append(renderLetters(project, onChange));
     if (section === "changes") page.append(renderChanges(project, onChange));
+    if (section === "other") page.append(renderOther(project));
     host.append(page);
+  }
+
+  function pathField(label, value, onValue) {
+    var input = el("input", { type: "text", value: value || "" });
+    input.addEventListener("change", function () { onValue(input.value); });
+    var actions = root.CompliancePaths.buttons(function () { return input.value; });
+    return el("div", { class: "path-field" }, [el("label", { class: "attr" }, [label, input]), actions]);
   }
 
   function textField(label, value, onValue) {
@@ -95,6 +105,8 @@
       else if (item.days <= 30) lines.push("30 天内到期的法规日期：" + item.requirement + " · " + item.date);
       else if (item.days <= 90) lines.push("90 天内到期的法规日期：" + item.requirement + " · " + item.date);
     });
+    var unsorted = otherFiles(project, "待分类");
+    if (unsorted.length) lines.push("待分类里有 " + unsorted.length + " 个文件，请归到对应市场和维度。参考目录里的文件不计入正式证据。");
     var gaps = root.ComplianceStore.modelGaps(project);
     if (gaps.length) lines.push("型号未被证据覆盖：" + gaps.join("；"));
     (project.archive.evidence || []).forEach(function (item) {
@@ -204,7 +216,7 @@
         basic.variants = value.split("、").map(function (item) { return item.trim(); }).filter(Boolean);
         onChange(project);
       }),
-      textField("照片的 Dropbox 路径", basic.photoPath, function (value) { basic.photoPath = value; onChange(project); }),
+      pathField("照片的 Dropbox 路径", basic.photoPath, function (value) { basic.photoPath = value; onChange(project); }),
       selectField("状态", basic.status, STATUSES, function (value) { basic.status = value; onChange(project); }),
       textField("状态说明", basic.statusNote, function (value) { basic.statusNote = value; onChange(project); }),
     ]);
@@ -241,7 +253,7 @@
       box.append(el("div", { class: "question" }, [
         textField("供应商", item.name, function (value) { item.name = value; onChange(project); }),
         textField("部件", item.component, function (value) { item.component = value; onChange(project); }),
-        textField("Dropbox 路径", item.dropboxPath, function (value) { item.dropboxPath = value; onChange(project); }),
+        pathField("Dropbox 路径", item.dropboxPath, function (value) { item.dropboxPath = value; onChange(project); }),
         removeButton(function () { data.suppliers.splice(index, 1); onChange(project); refresh(); }),
       ]));
     });
@@ -267,7 +279,7 @@
       }).join("；");
       box.append(el("article", { class: "card" }, [
         selectField("类型", item.type, EVIDENCE_TYPES, function (value) { item.type = value; onChange(project); }),
-        textField("Dropbox 路径", item.dropboxPath, function (value) { item.dropboxPath = value; onChange(project); }),
+        pathField("Dropbox 路径", item.dropboxPath, function (value) { item.dropboxPath = value; onChange(project); }),
         textField("页码", item.page, function (value) { item.page = value; onChange(project); }),
         textField("标准", item.standard, function (value) { item.standard = value; onChange(project); }),
         textField("标准版本", item.standardVersion, function (value) { item.standardVersion = value; onChange(project); refresh(); }),
@@ -288,6 +300,7 @@
         }),
         el("p", { class: "help" }, ["版本核对：" + (linked || "未关联条目")]),
         el("p", { class: "path" }, [(item.dropboxPath || "路径待确认") + (item.page ? " 第 " + item.page + " 页" : "")]),
+        root.CompliancePaths.buttons(function () { return item.dropboxPath; }),
         removeButton(function () { project.archive.evidence.splice(index, 1); onChange(project); refresh(); }),
       ]));
     });
@@ -375,11 +388,12 @@
         el("label", { class: "attr" }, ["状态", statusSelect]),
         textField("理由", item.reason, function (value) { item.reason = value; save(); }),
         textField("来源", item.source, function (value) { item.source = value; save(); }),
-        textField("Dropbox 路径", item.dropboxPath, function (value) { item.dropboxPath = value; save(); }),
+        pathField("Dropbox 路径", item.dropboxPath, function (value) { item.dropboxPath = value; save(); }),
         textField("页码", item.page, function (value) { item.page = value; save(); }),
         el("p", {}, [item.reason || "理由待确认"]),
         el("p", { class: "help" }, ["来源：" + (item.source || "待确认")]),
         el("p", { class: "path" }, ["追溯：" + (item.dropboxPath || row.folder) + (item.page ? " 第 " + item.page + " 页" : " 页码待确认")]),
+        root.CompliancePaths.buttons(function () { return item.dropboxPath || row.folder; }),
       ]));
     });
     return box;
@@ -412,8 +426,8 @@
       }).join("；");
       return [
         textField("名称", item.name, function (value) { item.name = value; onChange(project); }),
-        textField("设计稿 Dropbox 路径", item.designPath, function (value) { item.designPath = value; onChange(project); }),
-        textField("照片 Dropbox 路径", item.photoPath, function (value) { item.photoPath = value; onChange(project); }),
+        pathField("设计稿 Dropbox 路径", item.designPath, function (value) { item.designPath = value; onChange(project); }),
+        pathField("照片 Dropbox 路径", item.photoPath, function (value) { item.photoPath = value; onChange(project); }),
         textField("版本", item.version, function (value) { item.version = value; onChange(project); }),
         textField("对照条目", (item.requirementIds || []).join("、"), function (value) {
           item.requirementIds = value.split("、").map(function (part) { return part.trim(); }).filter(Boolean);
@@ -435,7 +449,7 @@
         selectField("市场", item.market || "EU", ["EU", "CA", "US"], function (value) { item.market = value; onChange(project); }),
         textField("语言", item.language, function (value) { item.language = value; onChange(project); }),
         textField("版本", item.version, function (value) { item.version = value; onChange(project); }),
-        textField("Dropbox 路径", item.dropboxPath, function (value) { item.dropboxPath = value; onChange(project); }),
+        pathField("Dropbox 路径", item.dropboxPath, function (value) { item.dropboxPath = value; onChange(project); }),
         textField("安全或电池警示所在位置", item.warningLocations, function (value) { item.warningLocations = value; onChange(project); }),
       ];
     }, onChange);
@@ -447,7 +461,7 @@
       el("p", { class: "help" }, ["联系方式只记 Dropbox 路径，不把电话和邮箱写进本工具。"]),
     ]);
     Object.keys(parties).forEach(function (key) {
-      box.append(textField(root.ComplianceStore.partyLabel(key) + " 的 Dropbox 路径", parties[key].dropboxPath, function (value) {
+      box.append(pathField(root.ComplianceStore.partyLabel(key) + " 的 Dropbox 路径", parties[key].dropboxPath, function (value) {
         parties[key].dropboxPath = value;
         onChange(project);
       }));
@@ -495,13 +509,62 @@
         textField("对方", item.party, function (value) { item.party = value; onChange(project); }),
         dateField("日期", item.date, function (value) { item.date = value; onChange(project); }),
         textField("摘要", item.summary, function (value) { item.summary = value; onChange(project); }),
-        textField("Dropbox 路径", item.dropboxPath, function (value) { item.dropboxPath = value; onChange(project); }),
+        pathField("Dropbox 路径", item.dropboxPath, function (value) { item.dropboxPath = value; onChange(project); }),
         textField("关联条目", (item.requirementIds || []).join("、"), function (value) {
           item.requirementIds = value.split("、").map(function (part) { return part.trim(); }).filter(Boolean);
           onChange(project);
         }),
       ];
     }, onChange);
+    return box;
+  }
+
+  function folderModel(project) {
+    var raw = ((project.archive.basic && project.archive.basic.model) || project.name || "").trim();
+    var cut = raw.split("（")[0].trim();
+    return cut || raw;
+  }
+
+  function otherFiles(project, bucket) {
+    var other = project._files && project._files.other;
+    if (!other || !other[bucket]) return [];
+    return other[bucket].files || [];
+  }
+
+  function loadOther(project) {
+    var model = folderModel(project);
+    if (!model || project._filesModel === model) return;
+    project._filesModel = model;
+    fetch("/api/files?model=" + encodeURIComponent(model)).then(function (response) {
+      return response.json();
+    }).then(function (data) {
+      project._files = data;
+      if (root.__archiveRefresh) root.__archiveRefresh();
+    }).catch(function () {});
+  }
+
+  function renderOther(project) {
+    loadOther(project);
+    var other = (project._files && project._files.other) || {};
+    var box = el("div", { id: "other-files" }, [
+      el("p", {}, ["这些文件在 02_产品/" + folderModel(project) + "/09_其他资料。参考目录不计入正式证据。待分类里一旦有文件，档案提醒会提示你归类。"]),
+      el("p", { class: "help" }, ["命名也可以用市场 GEN、维度 00GEN，例如 UNI-8_GEN_00GEN_RPT_CB12345_20260301_v1.pdf。CB12345 只是命名举例。"]),
+    ]);
+    ["通用", "待分类", "参考"].forEach(function (bucket) {
+      var slot = other[bucket] || { logical: "/合规知识库/02_产品/" + folderModel(project) + "/09_其他资料/" + bucket, files: [] };
+      var block = el("article", { class: "card" }, [
+        el("h3", {}, [bucket + (bucket === "参考" ? "（不计入正式证据）" : "")]),
+        el("p", { class: "path" }, [slot.logical || slot.folder || ""]),
+        root.CompliancePaths.buttons(slot.logical || slot.folder || ""),
+      ]);
+      var files = slot.files || [];
+      if (!files.length) block.append(el("p", { class: "help" }, ["这个文件夹里还没有文件。"]));
+      files.forEach(function (file) {
+        var note = file.formal ? "可按文件名预填，仍须你确认。" : "不作为正式证据。";
+        block.append(el("p", {}, [file.name + " · " + file.size + " 字节 · " + file.mtime + " · " + note]));
+      });
+      box.append(block);
+    });
     return box;
   }
 
