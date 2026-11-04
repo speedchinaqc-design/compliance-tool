@@ -3,7 +3,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from library import create_product_folders, local_preview, open_folder, parse_filename, scan_model
+from library import create_product_folders, local_preview, open_folder, parse_filename, scan_model, to_library_path
 
 os.environ["COMPLIANCE_OPEN"] = "0"
 
@@ -48,6 +48,8 @@ def main() -> None:
         except ValueError:
             pass
         shot = root / "02_产品" / "UNI-8" / "shot.png"
+        assert to_library_path(root, shot) == "/合规知识库/02_产品/UNI-8/shot.png"
+        assert to_library_path(root, root.parent / "secret.png") is None
         shot.write_bytes(b"\x89PNG\r\n\x1a\n")
         preview, mime = local_preview(root, "/合规知识库/02_产品/UNI-8/shot.png")
         assert preview == shot and mime == "image/png"

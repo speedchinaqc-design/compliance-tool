@@ -274,8 +274,16 @@
     return photos.filter(function (item) { return item && item.typical && item.path; })[0] || photos.filter(function (item) { return item && item.path; })[0] || null;
   }
 
+  function screenSideText(side) {
+    var type = String((side && side.type) || "").trim();
+    var size = String((side && side.size) || "").trim();
+    if (!size) return "";
+    return type ? type + " " + size : size;
+  }
+
   function screenSummary(screens) {
     return (screens || []).map(function (item) {
+      if (item && item.operator) return [screenSideText(item.operator), screenSideText(item.customer)].filter(Boolean).join(" + ");
       var type = String((item && item.type) || "").trim();
       var size = String((item && item.size) || "").trim();
       if (!size) return "";
@@ -283,25 +291,50 @@
     }).filter(Boolean).join(" + ");
   }
 
-  function normalizeScreens(source) {
-    if (source && Array.isArray(source.screens)) {
-      return source.screens.map(function (item) {
-        var entry = item && typeof item === "object" ? item : {};
-        return { type: String(entry.type || ""), size: String(entry.size || "") };
+  function normalizeSide(side, fallbackType) {
+    var source = side && typeof side === "object" ? side : {};
+    return { type: String(source.type || fallbackType), size: String(source.size || "") };
+  }
+
+  function normalizeScreenRows(list) {
+    return (list || []).map(function (item) {
+      return { operator: normalizeSide(item && item.operator, "操作屏"), customer: normalizeSide(item && item.customer, "客显屏") };
+    });
+  }
+
+  function pairFlatScreens(flat) {
+    var rows = [];
+    var index;
+    for (index = 0; index < flat.length; index += 2) {
+      var left = flat[index] || {};
+      var right = flat[index + 1] || { type: "客显屏", size: "" };
+      rows.push({
+        operator: { type: String(left.type || "操作屏"), size: String(left.size || "") },
+        customer: { type: String(right.type || "客显屏"), size: String(right.size || "") },
       });
     }
-    return [
+    return rows.length ? rows : [{ operator: { type: "操作屏", size: "" }, customer: { type: "客显屏", size: "" } }];
+  }
+
+  function normalizeScreens(source) {
+    var raw = source && source.screens;
+    if (Array.isArray(raw)) {
+      if (!raw.length) return [];
+      if (raw[0] && typeof raw[0] === "object" && raw[0].operator) return normalizeScreenRows(raw);
+      return pairFlatScreens(raw.map(function (item) {
+        var entry = item && typeof item === "object" ? item : {};
+        return { type: String(entry.type || ""), size: String(entry.size || "") };
+      }));
+    }
+    return pairFlatScreens([
       { type: "操作屏", size: String((source && source.screen) || "") },
       { type: "客显屏", size: "" },
-    ];
+    ]);
   }
 
   function emptyVariantRow(basic) {
     basic = basic || {};
-    var screens = [
-      { type: "操作屏", size: "" },
-      { type: "客显屏", size: "" },
-    ];
+    var screens = [{ operator: { type: "操作屏", size: "" }, customer: { type: "客显屏", size: "" } }];
     return {
       model: "",
       screen: screenSummary(screens),
@@ -465,6 +498,22 @@
       certificatePath: "",
       reportPath: "",
       links: [],
+      history: [],
+    };
+  }
+
+  function blankHistory(source) {
+    source = source || {};
+    return {
+      id: source.id || ("cbh-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+      updatedOn: String(source.updatedOn || source.issueDate || ""),
+      kind: String(source.kind || "其他"),
+      number: String(source.number || ""),
+      standardVersion: String(source.standardVersion || ""),
+      summary: String(source.summary || ""),
+      certificatePath: String(source.certificatePath || ""),
+      reportPath: String(source.reportPath || ""),
+      readonly: !!source.readonly,
     };
   }
 
@@ -481,6 +530,20 @@
     };
     next.modelsCovered = Array.isArray(source.modelsCovered) ? source.modelsCovered.map(function (item) { return String(item || "").trim(); }).filter(Boolean) : [];
     next.links = Array.isArray(source.links) ? source.links.map(function (item) { return String(item || ""); }).filter(Boolean) : [];
+    if (Array.isArray(source.history) && source.history.length) {
+      next.history = source.history.map(function (item) { return blankHistory(item); });
+    } else if (next.number || next.standardVersion || next.certificatePath || next.reportPath || next.expiry) {
+      next.history = [blankHistory({
+        updatedOn: next.issueDate,
+        kind: "其他",
+        number: next.number,
+        standardVersion: next.standardVersion,
+        summary: "由现有 CB 资料迁入",
+        certificatePath: next.certificatePath,
+        reportPath: next.reportPath,
+        readonly: true,
+      })];
+    }
     var changed = JSON.stringify(basic.cb) !== JSON.stringify(next);
     basic.cb = next;
     return changed;
@@ -502,6 +565,68 @@
       return filledVariants(basic).map(function (row) { return String(row.model).trim(); });
     }
     return legacyVariantNames(basic.variants);
+  }
+
+  var CB_MODULE_ID = "CB 体系（IEC 62368-1）";
+
+  function moduleLabel(id) {
+    if (id === CB_MODULE_ID) return "CB 体系";
+    return id || "";
+  }
+
+  function readCheck(project, id) {
+    var checks = (project && project.checks) || {};
+    var meta = (project && project.checkMeta && project.checkMeta[id]) || {};
+    return {
+      status: checks[id] || "未办理",
+      reason: meta.reason || "",
+      note: meta.note || "",
+      decidedOn: meta.decidedOn || "",
+      decider: meta.decider || "",
+      remark: meta.remark || "",
+    };
+  }
+
+  function applyChecklist(project, id, patch) {
+    project.checks = project.checks || {};
+    project.checkMeta = project.checkMeta || {};
+    if (patch.status) project.checks[id] = patch.status;
+    var meta = project.checkMeta[id] || { reason: "", note: "", decidedOn: "", decider: "", remark: "" };
+    ["reason", "note", "decidedOn", "decider", "remark"].forEach(function (key) {
+      if (patch[key] != null) meta[key] = patch[key];
+    });
+    project.checkMeta[id] = meta;
+    var todo = findReqTodo(project, id);
+    if (!todo || patch.fromTodo) return meta;
+    if (project.checks[id] === "不做") {
+      todo.conclusion = "不做";
+      todo.skipReason = meta.reason || "不适用";
+      todo.decidedOn = meta.decidedOn || "";
+      todo.decider = meta.decider || "";
+      if (meta.reason === "其他") todo.note = meta.note || "";
+    } else if (todo.conclusion === "不做") {
+      todo.conclusion = todo.priorConclusion && todo.priorConclusion !== "不做" && todo.priorConclusion !== "已取消" ? todo.priorConclusion : "待定";
+      todo.skipReason = "";
+    }
+    return meta;
+  }
+
+  function applyTodoToCheck(project, todo) {
+    if (!project || !todo || todo.kind !== "checklist" || !todo.sourceId) return;
+    project.checks = project.checks || {};
+    project.checkMeta = project.checkMeta || {};
+    var id = todo.sourceId;
+    var meta = project.checkMeta[id] || { reason: "", note: "", decidedOn: "", decider: "", remark: "" };
+    if (todo.conclusion === "不做") {
+      project.checks[id] = "不做";
+      meta.reason = todo.skipReason || "";
+      meta.decidedOn = todo.decidedOn || "";
+      meta.decider = todo.decider || "";
+      if (todo.skipReason === "其他") meta.note = todo.note || "";
+    } else if (project.checks[id] === "不做") {
+      project.checks[id] = "未办理";
+    }
+    project.checkMeta[id] = meta;
   }
 
   function findReqTodo(project, id) {
@@ -1184,6 +1309,11 @@
     waiverRecords: waiverRecords,
     countsAsMissing: countsAsMissing,
     screenSummary: screenSummary,
+    moduleLabel: moduleLabel,
+    CB_MODULE_ID: CB_MODULE_ID,
+    readCheck: readCheck,
+    applyChecklist: applyChecklist,
+    applyTodoToCheck: applyTodoToCheck,
     normalizePhotoList: normalizePhotoList,
     typicalPhoto: typicalPhoto,
     homeCellFlags: homeCellFlags,

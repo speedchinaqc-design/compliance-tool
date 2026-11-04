@@ -141,7 +141,7 @@
       });
       wrap.append(el("label", { class: "choice choice-block" }, [
         input,
-        el("span", {}, [el("strong", {}, [mod.id]), el("span", { class: "help" }, [mod.summary])]),
+        el("span", {}, [el("strong", {}, [root.ComplianceStore.moduleLabel(mod.id)]), el("span", { class: "help" }, [mod.summary])]),
       ]));
     });
     return wrap;

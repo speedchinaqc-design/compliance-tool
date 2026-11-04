@@ -22,6 +22,7 @@ from library import (
     library_map,
     local_preview,
     open_folder,
+    pick_image_files,
     resolve_root,
     scan_model,
 )
@@ -354,6 +355,12 @@ class LocalHandler(SimpleHTTPRequestHandler):
                 self._send_json(create_product_folders(root, model))
             except ValueError as exc:
                 self._send_json({"ok": False, "error": str(exc)}, 400)
+            return
+        if path == "/api/pick-images":
+            with LOCK:
+                store = read_store()
+            root = resolve_root(store["settings"].get("dropboxRoot"))
+            self._send_json(pick_image_files(root))
             return
         if path == "/api/open-folder":
             try:

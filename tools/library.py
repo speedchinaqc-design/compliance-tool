@@ -325,6 +325,69 @@ def local_preview(root: Path, text: str) -> tuple[Path, str]:
     return path, mime
 
 
+def to_library_path(root: Path, file_path: Path) -> str | None:
+    path = Path(file_path)
+    if not _inside(root, path):
+        return None
+    relative = path.resolve().relative_to(root.resolve()).as_posix()
+    return "/合规知识库/" + relative
+
+
+def pick_image_files(root: Path) -> dict:
+    """打开本机文件窗口，多选图片。只把合规知识库里面的路径交回页面。"""
+    if os.environ.get("COMPLIANCE_PICK") == "0":
+        return {"ok": True, "files": [], "outside": [], "cancelled": True}
+    chosen = _ask_image_files(root if root.is_dir() else Path.home())
+    if chosen is None:
+        return {"ok": False, "error": "没能打开文件选择窗口", "files": [], "outside": []}
+    files: list[str] = []
+    outside: list[str] = []
+    for item in chosen:
+        logical = to_library_path(root, Path(item))
+        if logical:
+            files.append(logical)
+        else:
+            outside.append(str(item))
+    return {"ok": True, "files": files, "outside": outside, "cancelled": False}
+
+
+def _ask_image_files(directory: Path) -> list[str] | None:
+    folder = str(directory)
+    try:
+        import webview
+
+        windows = list(getattr(webview, "windows", []) or [])
+        if windows:
+            picked = windows[0].create_file_dialog(
+                webview.OPEN_DIALOG,
+                directory=folder,
+                allow_multiple=True,
+                file_types=("Images (*.png;*.jpg;*.jpeg;*.gif;*.webp;*.bmp)",),
+            )
+            return [str(item) for item in (picked or [])]
+    except Exception:
+        pass
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+
+        host = tk.Tk()
+        host.withdraw()
+        try:
+            host.attributes("-topmost", True)
+        except tk.TclError:
+            pass
+        picked = filedialog.askopenfilenames(
+            initialdir=folder,
+            title="选择图片",
+            filetypes=[("图片", "*.png *.jpg *.jpeg *.gif *.webp *.bmp"), ("全部", "*.*")],
+        )
+        host.destroy()
+        return [str(item) for item in picked]
+    except Exception:
+        return None
+
+
 def library_map() -> dict:
     return {
         "folders": FOLDER_BY_CODE,

@@ -181,17 +181,36 @@ sized.basic.variantRows = [{
 }];
 assert(store.migrateVariants(sized) === true, "旧屏幕尺寸应迁进第一项");
 const sizedRow = sized.basic.variantRows[0];
-assert(sizedRow.screens[0].type === "操作屏" && sizedRow.screens[0].size === "7 寸双屏", "旧文字应原样留在第一项");
-assert(sizedRow.screens[1].type === "客显屏" && sizedRow.screens[1].size === "", "默认应有客显屏");
+assert(sizedRow.screens[0].operator.type === "操作屏" && sizedRow.screens[0].operator.size === "7 寸双屏", "旧文字应原样留在操作屏");
+assert(sizedRow.screens[0].customer.type === "客显屏" && sizedRow.screens[0].customer.size === "", "应配上客显屏");
 assert(store.screenSummary(sizedRow.screens) === "操作屏 7 寸双屏");
-sizedRow.screens[0].size = "15.6 寸";
-sizedRow.screens[1].size = "7 寸";
-sizedRow.screens.push({ type: "副屏", size: "10 寸" });
+sizedRow.screens[0].operator.size = "15.6 寸";
+sizedRow.screens[0].customer.size = "7 寸";
 store.touchVariants(sized);
-assert(sizedRow.screen === "操作屏 15.6 寸 + 客显屏 7 寸 + 副屏 10 寸", "汇总应带上自定义屏幕");
+assert(sizedRow.screen === "操作屏 15.6 寸 + 客显屏 7 寸", "汇总应带上成对屏幕");
 const sizedSnap = JSON.stringify(sized.basic.variantRows);
 assert(store.migrateVariants(sized) === false, "屏幕列表再次迁移不能改写");
 assert(JSON.stringify(sized.basic.variantRows) === sizedSnap);
+const paired = store.blankArchive();
+paired.basic.variantRows = [{
+  model: "UNI-8B",
+  screens: [
+    { type: "操作屏", size: "15.6 寸" },
+    { type: "客显屏", size: "7 寸" },
+    { type: "副屏", size: "10 寸" },
+    { type: "客显屏", size: "5 寸" },
+  ],
+  status: "研发",
+  statusNote: "",
+  launchDates: { EU: "", CA: "", US: "" },
+  photos: [{ path: "", typical: true }],
+  nameplatePhotos: [{ path: "", typical: true }],
+  labelInfo: "",
+}];
+assert(store.migrateVariants(paired) === true);
+assert(paired.basic.variantRows[0].screens.length === 2, "四条屏幕应配成两行");
+assert(paired.basic.variantRows[0].screens[1].operator.type === "副屏" && paired.basic.variantRows[0].screens[1].operator.size === "10 寸");
+assert(store.screenSummary(paired.basic.variantRows[0].screens) === "操作屏 15.6 寸 + 客显屏 7 寸 + 副屏 10 寸 + 客显屏 5 寸");
 
 const cell = store.uni8Project();
 assert(store.homeCellFlags(cell, ["CA-07"], [], []).indexOf("缺证据") !== -1, "没有证据应算缺证据");
@@ -229,4 +248,30 @@ assert(store.migrateVariants(thumbs) === true);
 assert(thumbs.basic.thumbnails.length === 1 && thumbs.basic.thumbnails[0].main && thumbs.basic.thumbnail.indexOf("base64") !== -1);
 const summary = store.overview(store.uni8Project());
 assert(summary.label.indexOf("已填 ") === 0 && summary.items.some((item) => item.text === "未填：CB 证书号"));
+
+const linked = store.uni8Project();
+store.syncTodos(linked, [{ key: "req:CA-07", kind: "checklist", sourceId: "CA-07", title: "CA-07" }, { key: "req:GEN-CB", kind: "checklist", sourceId: "GEN-CB", title: "GEN-CB CB 体系" }]);
+store.applyChecklist(linked, "CA-07", { status: "不做", reason: "不适用", decidedOn: "2026-11-04" });
+const linkedTodo = linked.todos.find((item) => item.sourceId === "CA-07");
+assert(linkedTodo.conclusion === "不做" && linkedTodo.skipReason === "不适用" && linkedTodo.decidedOn === "2026-11-04", "清单不做应写到待办");
+linkedTodo.conclusion = "待定";
+store.applyTodoToCheck(linked, linkedTodo);
+assert(linked.checks["CA-07"] === "未办理", "待办离开不做后清单应回到未办理");
+linkedTodo.conclusion = "不做";
+linkedTodo.skipReason = "已有证据覆盖";
+linkedTodo.decidedOn = "2026-11-05";
+store.applyTodoToCheck(linked, linkedTodo);
+assert(linked.checks["CA-07"] === "不做" && linked.checkMeta["CA-07"].reason === "已有证据覆盖" && linked.checkMeta["CA-07"].decidedOn === "2026-11-05");
+assert(linked.todos.some((item) => item.sourceId === "GEN-CB"), "每个产品都有 GEN-CB 待办");
+
+const cbArch = store.blankArchive();
+cbArch.basic.cb.number = "CB123";
+cbArch.basic.cb.standardVersion = "2018";
+cbArch.basic.cb.certificatePath = "/合规知识库/02_产品/UNI-8/GEN/04ELEC_电气安全/cert.pdf";
+cbArch.basic.cb.issueDate = "2026-01-01";
+delete cbArch.basic.cb.history;
+assert(store.migrateVariants(cbArch) === true);
+assert(cbArch.basic.cb.history.length === 1 && cbArch.basic.cb.history[0].readonly && cbArch.basic.cb.history[0].number === "CB123" && cbArch.basic.cb.history[0].summary === "由现有 CB 资料迁入");
+const historyId = cbArch.basic.cb.history[0].id;
+assert(store.migrateVariants(cbArch) === false && cbArch.basic.cb.history[0].id === historyId, "CB 履历不能每次换新");
 console.log("project tests passed");

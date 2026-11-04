@@ -383,50 +383,22 @@
       row.screen = text;
       summary.textContent = text || "尚未填写屏幕尺寸。";
     }
-    (row.screens || []).forEach(function (item, index) {
-      var known = item.type === "操作屏" || item.type === "客显屏";
-      var select = el("select", { "aria-label": "屏幕类型" });
-      [["操作屏", "操作屏"], ["客显屏", "客显屏"], ["__custom", "其他"]].forEach(function (pair) {
-        var option = el("option", { value: pair[0] }, [pair[1]]);
-        if ((known && pair[0] === item.type) || (!known && pair[0] === "__custom")) option.selected = true;
-        select.append(option);
-      });
-      var custom = el("input", { type: "text", value: known ? "" : (item.type || ""), placeholder: "例如 副屏" });
-      if (known) custom.hidden = true;
-      select.addEventListener("change", function () {
-        if (select.value === "__custom") {
-          custom.hidden = false;
-          item.type = custom.value.trim();
-          custom.focus();
-        } else {
-          custom.hidden = true;
-          item.type = select.value;
-        }
-        paintSummary();
-        onCommit(false);
-      });
-      custom.addEventListener("change", function () {
-        item.type = custom.value.trim();
-        paintSummary();
-        onCommit(false);
-      });
-      var size = el("input", { type: "text", value: item.size || "", placeholder: "例如 7 寸" });
-      size.addEventListener("change", function () {
-        item.size = size.value;
-        paintSummary();
-        onCommit(false);
-      });
+    (row.screens || []).forEach(function (pair, index) {
+      var line = el("div", { class: "screen-line" });
+      line.append(screenSide(pair, "operator", "操作屏", paintSummary, onCommit));
+      line.append(screenSide(pair, "customer", "客显屏", paintSummary, onCommit));
       var del = el("button", { type: "button", class: "ghost" }, ["删除"]);
       del.addEventListener("click", function () {
         row.screens.splice(index, 1);
         paintSummary();
         onCommit(true);
       });
-      box.append(el("div", { class: "screen-line" }, [select, custom, size, del]));
+      line.append(del);
+      box.append(line);
     });
     var add = el("button", { type: "button", class: "ghost" }, ["增加屏幕尺寸"]);
     add.addEventListener("click", function () {
-      row.screens.push({ type: "操作屏", size: "" });
+      row.screens.push({ operator: { type: "操作屏", size: "" }, customer: { type: "客显屏", size: "" } });
       onCommit(true);
     });
     paintSummary();
@@ -434,11 +406,74 @@
     return box;
   }
 
+  function screenSide(pair, key, fallback, paintSummary, onCommit) {
+    var side = pair[key] || { type: fallback, size: "" };
+    pair[key] = side;
+    var known = side.type === "操作屏" || side.type === "客显屏";
+    var select = el("select", { "aria-label": fallback + "类型" });
+    [["操作屏", "操作屏"], ["客显屏", "客显屏"], ["__custom", "其他"]].forEach(function (optionPair) {
+      var option = el("option", { value: optionPair[0] }, [optionPair[1]]);
+      if ((known && optionPair[0] === side.type) || (!known && optionPair[0] === "__custom")) option.selected = true;
+      select.append(option);
+    });
+    var custom = el("input", { type: "text", value: known ? "" : (side.type || ""), placeholder: "例如 副屏" });
+    if (known) custom.hidden = true;
+    select.addEventListener("change", function () {
+      if (select.value === "__custom") {
+        custom.hidden = false;
+        side.type = custom.value.trim();
+        custom.focus();
+      } else {
+        custom.hidden = true;
+        side.type = select.value;
+      }
+      paintSummary();
+      onCommit(false);
+    });
+    custom.addEventListener("change", function () {
+      side.type = custom.value.trim();
+      paintSummary();
+      onCommit(false);
+    });
+    var size = el("input", { type: "text", value: side.size || "", placeholder: "例如 7 寸" });
+    size.addEventListener("change", function () {
+      side.size = size.value;
+      paintSummary();
+      onCommit(false);
+    });
+    return el("div", { class: "screen-side" }, [select, custom, size]);
+  }
+
+  function choosePhotos(list, onCommit) {
+    fetch("/api/pick-images", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).then(function (response) {
+      return response.json();
+    }).then(function (data) {
+      if (!data || data.ok === false) {
+        window.alert((data && data.error) || "没能打开文件选择窗口。");
+        return;
+      }
+      if (data.cancelled) return;
+      if (data.outside && data.outside.length) window.alert("这些文件不在 Dropbox 合规知识库里，没有加入：\n" + data.outside.join("\n"));
+      (data.files || []).forEach(function (path) {
+        list.push({ path: path, typical: !list.some(function (photo) { return photo.typical && photo.path; }) });
+      });
+      if ((data.files || []).length) {
+        for (var i = list.length - 1; i >= 0; i -= 1) {
+          if (!list[i].path && list.length > 1) list.splice(i, 1);
+        }
+        if (list.length && !list.some(function (photo) { return photo.typical; })) list[0].typical = true;
+        onCommit();
+      }
+    }).catch(function () {
+      window.alert("没能打开文件选择窗口。请用 python3 tools/serve.py 或桌面版。");
+    });
+  }
+
   function photoListEditors(list, onCommit) {
     if (!Array.isArray(list)) return el("div");
     var stack = el("div", { class: "photo-stack" });
     list.forEach(function (item, index) {
-      stack.append(pathField("照片 " + (index + 1), item.path, function (value) {
+      stack.append(pathField("照片路径（点“选择图片”自动填）", item.path, function (value) {
         item.path = value;
         if (!list.some(function (photo) { return photo.typical; })) item.typical = true;
         onCommit();
@@ -458,12 +493,14 @@
       });
       stack.append(el("div", { class: "wizard-bar" }, [typical, del]));
     });
+    var pick = el("button", { type: "button" }, ["选择图片"]);
+    pick.addEventListener("click", function () { choosePhotos(list, onCommit); });
     var add = el("button", { type: "button", class: "ghost" }, ["增加照片"]);
     add.addEventListener("click", function () {
       list.push({ path: "", typical: !list.some(function (photo) { return photo.typical; }) });
       onCommit();
     });
-    stack.append(add);
+    stack.append(el("div", { class: "wizard-bar" }, [pick, add]));
     return stack;
   }
 
@@ -978,7 +1015,7 @@
     var cb = project.archive.basic.cb;
     var folder = "/合规知识库/02_产品/" + folderModel(project) + "/GEN/04ELEC_电气安全/";
     var box = el("div", { id: "cb-record", class: "card" }, [
-      el("h3", {}, ["CB 体系（IEC 62368-1）"]),
+      el("h3", {}, ["CB 体系"]),
       el("p", { class: "help" }, ["这不是新的法规条目。证书和报告作为 EU-04、CA-04、US-04 里已有 62368-1 要求的参考证据。文件放在 GEN/04ELEC_电气安全，不把内容抄进仓库。"]),
       el("p", { class: "path" }, [folder]),
       root.CompliancePaths.buttons(folder),
@@ -1026,6 +1063,94 @@
       if (input.checked && row && cb.standardVersion) {
         box.append(el("p", { class: "help" }, ["版本核对：" + root.ComplianceStore.versionGap({ standardVersion: cb.standardVersion }, row.entry)]));
       }
+    });
+    box.append(renderCbHistory(project, cb, onChange));
+    return box;
+  }
+
+  function renderCbHistory(project, cb, onChange) {
+    var box = el("section", { id: "cb-history" }, [el("h3", {}, ["CB 履历"])]);
+    var draft = (cb.history || []).some(function (item) { return !item.readonly; });
+    var add = el("button", { type: "button", id: "cb-add-update" }, ["新增 CB 更新"]);
+    add.disabled = draft;
+    add.addEventListener("click", function () {
+      cb.history = cb.history || [];
+      cb.history.push({
+        id: "cbh-" + Date.now().toString(36),
+        updatedOn: "",
+        kind: "标准换版",
+        number: cb.number || "",
+        standardVersion: cb.standardVersion || "",
+        summary: "",
+        certificatePath: cb.certificatePath || "",
+        reportPath: cb.reportPath || "",
+        readonly: false,
+      });
+      onChange(project);
+      refresh();
+    });
+    box.append(add);
+    (cb.history || []).forEach(function (entry) {
+      if (entry.readonly) {
+        box.append(el("article", { class: "card" }, [
+          el("p", {}, [entry.updatedOn || "日期未填", " · ", entry.kind, " · ", entry.number || "证书号未填"]),
+          el("p", {}, ["标准版本：" + (entry.standardVersion || "未填")]),
+          el("p", { class: "fixed-note" }, [entry.summary || ""]),
+          el("p", { class: "path" }, [entry.certificatePath || "证书路径未填"]),
+          entry.certificatePath ? root.CompliancePaths.buttons(entry.certificatePath) : null,
+          el("p", { class: "path" }, [entry.reportPath || ""]),
+          entry.reportPath ? root.CompliancePaths.buttons(entry.reportPath) : null,
+        ]));
+        return;
+      }
+      var kind = el("select");
+      ["标准换版", "产品迭代", "新增型号", "证书续期", "其他"].forEach(function (label) {
+        var option = el("option", { value: label }, [label]);
+        if (entry.kind === label) option.selected = true;
+        kind.append(option);
+      });
+      kind.addEventListener("change", function () { entry.kind = kind.value; onChange(project); });
+      var updatedOn = el("input", { type: "date", value: entry.updatedOn || "" });
+      updatedOn.addEventListener("change", function () { entry.updatedOn = updatedOn.value; onChange(project); });
+      var number = el("input", { type: "text", value: entry.number || "" });
+      number.addEventListener("change", function () { entry.number = number.value; onChange(project); });
+      var version = el("input", { type: "text", value: entry.standardVersion || "" });
+      version.addEventListener("change", function () { entry.standardVersion = version.value; onChange(project); });
+      var summary = el("textarea", { class: "fixed-note", rows: "4" }, [entry.summary || ""]);
+      summary.addEventListener("change", function () { entry.summary = summary.value; onChange(project); });
+      var cert = el("input", { type: "text", value: entry.certificatePath || "" });
+      cert.addEventListener("change", function () { entry.certificatePath = cert.value; onChange(project); });
+      var report = el("input", { type: "text", value: entry.reportPath || "" });
+      report.addEventListener("change", function () { entry.reportPath = report.value; onChange(project); });
+      var save = el("button", { type: "button" }, ["保存此更新"]);
+      save.addEventListener("click", function () {
+        cb.number = entry.number || "";
+        cb.standardVersion = entry.standardVersion || "";
+        cb.certificatePath = entry.certificatePath || "";
+        cb.reportPath = entry.reportPath || "";
+        entry.readonly = true;
+        project.archive.changelog = project.archive.changelog || [];
+        project.archive.changelog.push({
+          date: entry.updatedOn || "",
+          kind: "标准",
+          summary: "CB 更新：" + (entry.kind || "") + " " + (entry.number || ""),
+          actions: entry.summary || "",
+        });
+        onChange(project);
+        refresh();
+      });
+      box.append(el("article", { class: "card", id: "cb-draft" }, [
+        el("label", { class: "attr" }, ["更新日期", updatedOn]),
+        el("label", { class: "attr" }, ["更新类型", kind]),
+        el("label", { class: "attr" }, ["证书号/修订号", number]),
+        el("label", { class: "attr" }, ["标准版本", version]),
+        el("label", { class: "attr" }, ["简要说明", summary]),
+        el("label", { class: "attr" }, ["证书 Dropbox 路径", cert]),
+        root.CompliancePaths.buttons(function () { return cert.value; }),
+        el("label", { class: "attr" }, ["报告 Dropbox 路径", report]),
+        root.CompliancePaths.buttons(function () { return report.value; }),
+        save,
+      ]));
     });
     return box;
   }
