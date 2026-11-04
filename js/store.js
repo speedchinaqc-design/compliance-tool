@@ -239,17 +239,199 @@
     };
   }
 
-  function blankArchive() {
+  var WAIVER_STATUS = "领导层决定先不做测试";
+
+  function emptyLaunchDates(source) {
+    source = source || {};
+    return { EU: source.EU || "", CA: source.CA || "", US: source.US || "" };
+  }
+
+  function threePaths(value) {
+    var list = Array.isArray(value) ? value : [];
+    return [0, 1, 2].map(function (index) { return String(list[index] || ""); });
+  }
+
+  function emptyVariantRow(basic) {
+    basic = basic || {};
     return {
-      basic: {
-        model: "",
-        variants: [],
-        photoPath: "",
-        thumbnail: "",
-        status: "研发",
-        statusNote: "",
-        launchDates: { EU: "", CA: "", US: "" },
-      },
+      model: "",
+      screen: "",
+      photos: ["", "", ""],
+      status: basic.status || "研发",
+      statusNote: basic.statusNote || "",
+      launchDates: emptyLaunchDates(basic.launchDates),
+      nameplatePhotos: ["", "", ""],
+      labelInfo: "",
+    };
+  }
+
+  function normalizeVariantRow(row, basic) {
+    var base = emptyVariantRow(basic);
+    var source = row && typeof row === "object" ? row : {};
+    base.model = String(source.model || "").trim();
+    base.screen = String(source.screen || "");
+    base.photos = threePaths(source.photos);
+    base.status = String(source.status || base.status);
+    base.statusNote = source.statusNote != null ? String(source.statusNote) : base.statusNote;
+    var dates = source.launchDates || base.launchDates;
+    base.launchDates = emptyLaunchDates(dates);
+    base.nameplatePhotos = threePaths(source.nameplatePhotos);
+    base.labelInfo = String(source.labelInfo || "");
+    return base;
+  }
+
+  function legacyVariantNames(value) {
+    var names = [];
+    function pushText(text) {
+      String(text || "").split("、").forEach(function (part) {
+        var name = part.trim();
+        if (name) names.push(name);
+      });
+    }
+    if (typeof value === "string") pushText(value);
+    else if (Array.isArray(value)) {
+      value.forEach(function (item) {
+        if (typeof item === "string") pushText(item);
+        else if (item && typeof item === "object") pushText(item.model || "");
+      });
+    }
+    return names;
+  }
+
+  function rowsFromLegacy(basic) {
+    var value = basic.variants;
+    var rows = [];
+    if (Array.isArray(value)) {
+      value.forEach(function (item) {
+        if (item && typeof item === "object" && !Array.isArray(item)) {
+          var kept = normalizeVariantRow(item, basic);
+          if (!kept.status) kept.status = basic.status || "研发";
+          if (kept.model) rows.push(kept);
+          return;
+        }
+        legacyVariantNames(item).forEach(function (name) {
+          var row = emptyVariantRow(basic);
+          row.model = name;
+          rows.push(row);
+        });
+      });
+      return rows;
+    }
+    legacyVariantNames(value).forEach(function (name) {
+      var row = emptyVariantRow(basic);
+      row.model = name;
+      rows.push(row);
+    });
+    return rows;
+  }
+
+  function filledVariants(basic) {
+    return ((basic && basic.variantRows) || []).filter(function (row) {
+      return row && String(row.model || "").trim();
+    });
+  }
+
+  function syncVariantNames(basic) {
+    if (!basic) return [];
+    if (Array.isArray(basic.variantRows)) {
+      basic.variants = filledVariants(basic).map(function (row) { return String(row.model).trim(); });
+    } else {
+      basic.variants = legacyVariantNames(basic.variants);
+    }
+    return basic.variants;
+  }
+
+  function aggregateStatus(basicOrRows) {
+    var rows = Array.isArray(basicOrRows) ? basicOrRows : filledVariants(basicOrRows);
+    rows = rows.filter(function (row) { return row && String(row.model || "").trim(); });
+    var launched = rows.filter(function (row) { return row.status === "已上市"; }).length;
+    if (!rows.length || launched === 0) return "未上市";
+    if (launched === rows.length) return "全部已上市";
+    return "部分已上市";
+  }
+
+  function migrateVariants(archive) {
+    if (!archive || !archive.basic) return false;
+    var basic = archive.basic;
+    var changed = false;
+    if (!basic.launchDates || typeof basic.launchDates !== "object") {
+      basic.launchDates = { EU: "", CA: "", US: "" };
+      changed = true;
+    }
+    if (!Array.isArray(basic.variantRows)) {
+      basic.variantRows = rowsFromLegacy(basic);
+      while (basic.variantRows.length < 6) basic.variantRows.push(emptyVariantRow(basic));
+      changed = true;
+    } else {
+      var normalized = basic.variantRows.map(function (row) { return normalizeVariantRow(row, basic); });
+      if (JSON.stringify(normalized) !== JSON.stringify(basic.variantRows)) {
+        basic.variantRows = normalized;
+        changed = true;
+      }
+    }
+    var names = syncVariantNames(basic);
+    if (!Array.isArray(basic.variants)) {
+      basic.variants = names;
+      changed = true;
+    }
+    basic.statusAggregate = aggregateStatus(basic);
+    return changed;
+  }
+
+  function touchVariants(archive) {
+    if (!archive || !archive.basic) return;
+    syncVariantNames(archive.basic);
+    archive.basic.statusAggregate = aggregateStatus(archive.basic);
+  }
+
+  function variantModels(project) {
+    var basic = project.archive && project.archive.basic;
+    if (!basic) return [];
+    if (Array.isArray(basic.variantRows)) {
+      return filledVariants(basic).map(function (row) { return String(row.model).trim(); });
+    }
+    return legacyVariantNames(basic.variants);
+  }
+
+  function isTestWaived(project, id) {
+    var test = project && project.tests && project.tests[id];
+    return !!(test && test.status === WAIVER_STATUS);
+  }
+
+  function waiverRecords(project) {
+    var tests = (project && project.tests) || {};
+    return Object.keys(tests).filter(function (id) {
+      return tests[id] && tests[id].status === WAIVER_STATUS;
+    }).map(function (id) {
+      var test = tests[id];
+      return {
+        id: id,
+        decider: test.decider || "",
+        decidedOn: test.decidedOn || "",
+        note: test.note || "",
+        complete: !!(test.decider && test.decidedOn),
+      };
+    });
+  }
+
+  function countsAsMissing(project, item) {
+    return !!(item && item.status === "缺失" && !isTestWaived(project, item.requirement));
+  }
+
+  function blankArchive() {
+    var basicSeed = {
+      model: "",
+      variants: [],
+      photoPath: "",
+      thumbnail: "",
+      status: "研发",
+      statusNote: "",
+      launchDates: { EU: "", CA: "", US: "" },
+    };
+    basicSeed.variantRows = [0, 1, 2, 3, 4, 5].map(function () { return emptyVariantRow(basicSeed); });
+    basicSeed.statusAggregate = "未上市";
+    return {
+      basic: basicSeed,
       sensitive: { note: "", costNote: "", suppliers: [] },
       evidence: [],
       comparisons: [],
@@ -399,9 +581,13 @@
   }
 
   function ensureArchive(project) {
-    if (project.archive && project.archive.basic && project.archive.parties) return false;
-    project.archive = project.id === "uni-8-sample" ? sampleArchive() : blankArchive();
-    return true;
+    var created = false;
+    if (!(project.archive && project.archive.basic && project.archive.parties)) {
+      project.archive = project.id === "uni-8-sample" ? sampleArchive() : blankArchive();
+      created = true;
+    }
+    var migrated = migrateVariants(project.archive);
+    return created || migrated;
   }
 
   function partyLabel(key) {
@@ -438,7 +624,7 @@
   }
 
   function modelGaps(project) {
-    var variants = ((project.archive && project.archive.basic.variants) || []).filter(Boolean);
+    var variants = variantModels(project);
     return variants.filter(function (variant) {
       return !(project.archive.evidence || []).some(function (item) {
         return (item.modelsCovered || []).indexOf(variant) !== -1;
@@ -546,16 +732,34 @@
       if (includeSensitive) copy.fee = item.fee;
       return copy;
     });
+    var basic = project.archive.basic;
     return {
       market: market || "全部",
       technicalIndex: [
-        "产品说明：" + (project.archive.basic.model || project.name) + "（待确认处仍待确认）",
+        "产品说明：" + (basic.model || project.name) + "（待确认处仍待确认）",
+        "产品状态：" + (basic.statusAggregate || aggregateStatus(basic)),
         "证据只列路径和编号，文件在 Dropbox。",
         "付费标准原文不纳入。",
-      ],
+      ].concat(waiverRecords(project).map(function (item) {
+        return "领导层决定先不做测试：" + item.id + " · 决定人 " + (item.decider || "未填") + " · " + (item.decidedOn || "日期未填") + (item.note ? " · " + item.note : "") + "。不计入缺失证据。";
+      })),
       evidence: evidence,
       comparisons: comparisons,
       schedule: schedule,
+      variants: filledVariants(basic).map(function (row) {
+        return {
+          model: row.model,
+          screen: row.screen,
+          status: row.status,
+          statusNote: row.statusNote,
+          launchDates: row.launchDates,
+          photos: row.photos,
+          nameplatePhotos: row.nameplatePhotos,
+          labelInfo: row.labelInfo,
+        };
+      }),
+      statusAggregate: basic.statusAggregate || aggregateStatus(basic),
+      testDecisions: waiverRecords(project),
       sensitive: includeSensitive ? project.archive.sensitive : null,
     };
   }
@@ -650,6 +854,15 @@
     normalizeJudgment: normalizeJudgment,
     normalizeComparison: normalizeComparison,
     ensureArchive: ensureArchive,
+    migrateVariants: migrateVariants,
+    touchVariants: touchVariants,
+    emptyVariantRow: emptyVariantRow,
+    aggregateStatus: aggregateStatus,
+    filledVariants: filledVariants,
+    isTestWaived: isTestWaived,
+    waiverRecords: waiverRecords,
+    countsAsMissing: countsAsMissing,
+    WAIVER_STATUS: WAIVER_STATUS,
     blankArchive: blankArchive,
     sampleArchive: sampleArchive,
     daysUntil: daysUntil,

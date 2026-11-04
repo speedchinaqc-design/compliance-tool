@@ -290,6 +290,33 @@ def open_folder(root: Path, text: str, create: bool) -> dict:
     return {"ok": True, "opened": True, "path": str(folder)}
 
 
+IMAGE_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".bmp": "image/bmp",
+}
+
+
+def local_preview(root: Path, text: str) -> tuple[Path, str]:
+    """返回 Dropbox 根目录内的一张本地图片。不把文件复制进仓库。"""
+    if not root.is_dir():
+        raise ValueError("Dropbox 根目录不存在")
+    path = logical_to_local(root, text)
+    if not _inside(root, path):
+        raise ValueError("路径超出 Dropbox 根目录")
+    if not path.is_file():
+        raise ValueError("不是本地文件")
+    mime = IMAGE_TYPES.get(path.suffix.lower())
+    if not mime:
+        raise ValueError("不是图片")
+    if path.stat().st_size > 12_000_000:
+        raise ValueError("图片太大")
+    return path, mime
+
+
 def library_map() -> dict:
     return {
         "folders": FOLDER_BY_CODE,

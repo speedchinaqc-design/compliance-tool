@@ -194,7 +194,7 @@
 
   function renderTests(project, onChange) {
     var rows = rowsFor(project);
-    var wrap = el("div", {}, [el("p", {}, ["为每条适用要求记测试进度和证书到期日。日期留空表示还没有证书。工具不计算是否已经过期以外的结论。"])]);
+    var wrap = el("div", {}, [el("p", {}, ["为每条适用要求记测试进度和证书到期日。日期留空表示还没有证书。选「领导层决定先不做测试」后，这一条不计入缺失证据，但要记下决定人和决定日期。"])]);
     var soon = [];
     rows.forEach(function (row) {
       var test = ensureTest(project, row.entry.id);
@@ -204,7 +204,7 @@
     rows.forEach(function (row) {
       var test = ensureTest(project, row.entry.id);
       var status = el("select");
-      ["未开始", "进行中", "已完成", "待确认"].forEach(function (label) {
+      ["未开始", "进行中", "已完成", "待确认", root.ComplianceStore.WAIVER_STATUS].forEach(function (label) {
         var option = el("option", { value: label }, [label]);
         if (test.status === label) option.selected = true;
         status.append(option);
@@ -212,6 +212,7 @@
       status.addEventListener("change", function () {
         test.status = status.value;
         onChange(project);
+        render(document.getElementById("app"), project, "tests", onChange, root.__workspaceBack, root.__workspaceWizard);
       });
       var expiry = el("input", { type: "date", value: test.expiry || "" });
       expiry.addEventListener("change", function () {
@@ -224,13 +225,32 @@
         test.note = note.value;
         onChange(project);
       });
-      wrap.append(el("article", { class: "card" }, [
-        el("h3", {}, [row.marketName + " · " + row.dimension.name_zh]),
+      var block = el("article", { class: "card" }, [
+        el("h3", {}, [row.entry.id + " " + row.dimension.name_zh]),
+        el("p", { class: "help" }, [row.marketName + " · " + (row.entry.regulation_name || "")]),
         el("p", { class: "help" }, [row.matrixKey]),
         el("label", { class: "attr" }, ["测试进度", status]),
         el("label", { class: "attr" }, ["证书到期日", expiry]),
-        el("label", { class: "attr" }, ["备注", note]),
-      ]));
+        el("label", { class: "attr" }, ["备注（可选）", note]),
+      ]);
+      if (test.status === root.ComplianceStore.WAIVER_STATUS) {
+        var decider = el("input", { type: "text", value: test.decider || "", placeholder: "必填" });
+        decider.addEventListener("change", function () {
+          test.decider = decider.value.trim();
+          onChange(project);
+        });
+        var decidedOn = el("input", { type: "date", value: test.decidedOn || "" });
+        decidedOn.addEventListener("change", function () {
+          test.decidedOn = decidedOn.value;
+          onChange(project);
+          render(document.getElementById("app"), project, "tests", onChange, root.__workspaceBack, root.__workspaceWizard);
+        });
+        block.append(el("label", { class: "attr" }, ["决定人", decider]));
+        block.append(el("label", { class: "attr" }, ["决定日期", decidedOn]));
+        if (!test.decider || !test.decidedOn) block.append(el("p", { class: "note" }, ["请填写决定人和决定日期。填齐之前，汇总里会标出未填，这一条仍然不计入缺失证据。"]));
+        else block.append(el("p", { class: "help" }, ["已记录。这一条不计入缺失证据。"]));
+      }
+      wrap.append(block);
     });
     return wrap;
   }
@@ -272,7 +292,7 @@
 
   function ensureTest(project, id) {
     project.tests = project.tests || {};
-    if (!project.tests[id]) project.tests[id] = { status: "未开始", expiry: "", note: "" };
+    if (!project.tests[id]) project.tests[id] = { status: "未开始", expiry: "", note: "", decider: "", decidedOn: "" };
     return project.tests[id];
   }
 
@@ -294,6 +314,13 @@
     var table = root.ComplianceLogic.exportTable(rows, projectState(project), root.COMPLIANCE_DATA.product);
     table.sheets[1].rows.push(["产品", project.name]);
     table.sheets[1].rows.push(["免责声明", root.ComplianceStore.DISCLAIMER]);
+    var decisions = [["条目", "名称", "状态", "决定人", "决定日期", "备注"]];
+    rows.forEach(function (row) {
+      var test = (project.tests || {})[row.entry.id];
+      if (!test || test.status !== root.ComplianceStore.WAIVER_STATUS) return;
+      decisions.push([row.entry.id, row.dimension.name_zh, test.status, test.decider || "", test.decidedOn || "", test.note || ""]);
+    });
+    table.sheets.push({ name: "测试决定", rows: decisions });
     var bytes = root.buildXlsx(table.sheets);
     var blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     var link = document.createElement("a");

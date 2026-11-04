@@ -142,7 +142,7 @@
         });
         var expiries = evidence.map(function (item) { return item.expiry; }).filter(Boolean).sort();
         var status = "待确认";
-        if (comparisons.some(function (item) { return item.status === "缺失"; })) status = "缺失";
+        if (comparisons.some(function (item) { return root.ComplianceStore.countsAsMissing(project, item); })) status = "缺失";
         else if (comparisons.some(function (item) { return item.status === "差距"; })) status = "差距";
         else if (comparisons.length && comparisons.every(function (item) { return item.status === "符合"; })) status = "符合";
         result.push({
@@ -157,8 +157,19 @@
     return result;
   }
 
+  function requirementTitle(rows, id) {
+    var row = (rows || []).filter(function (entry) { return entry.entry.id === id; })[0];
+    if (!row) return id;
+    var zh = row.dimension.name_zh || "";
+    var reg = row.entry.regulation_name || "";
+    if (zh && reg) return id + " " + zh + " " + reg;
+    return id + " " + (zh || reg);
+  }
+
   function renderHome(project, rows, onChange) {
     var records = summaryRows(project, rows);
+    var basic = project.archive.basic;
+    var aggregate = root.ComplianceStore.aggregateStatus(basic);
     var table = el("table", { class: "bands", id: "archive-home" });
     table.append(el("caption", {}, ["市场 × 模块"]));
     var head = el("tr");
@@ -191,7 +202,12 @@
       window.print();
       document.body.classList.remove("print-archive");
     });
+    var waivers = root.ComplianceStore.waiverRecords(project).map(function (item) {
+      return requirementTitle(rows, item.id) + " · 决定人 " + (item.decider || "未填") + " · " + (item.decidedOn || "日期未填") + (item.note ? " · " + item.note : "");
+    });
     return el("div", {}, [
+      el("p", { id: "product-status", class: "note" }, ["产品状态：" + aggregate + "。由各变体是否「已上市」汇总，主型号本身不是变体。"]),
+      waivers.length ? el("p", { class: "help" }, ["领导层决定先不做测试（不计入缺失证据）：" + waivers.join("；")]) : null,
       table,
       el("div", { class: "wizard-bar no-print" }, [
         market,
@@ -204,28 +220,114 @@
     ]);
   }
 
+  function commitVariants(project, onChange, rerender) {
+    root.ComplianceStore.touchVariants(project.archive);
+    onChange(project);
+    if (rerender) refresh();
+  }
+
+  function localThumb(path) {
+    if (!path) return el("p", { class: "help" }, ["未填路径，没有缩略图。"]);
+    var img = el("img", { class: "thumb", alt: "本地缩略图", src: "/api/preview?path=" + encodeURIComponent(path) });
+    img.addEventListener("error", function () {
+      var note = el("p", { class: "help" }, ["本机还没有这张图片。路径仍可打开文件夹。"]);
+      if (img.parentNode) img.replaceWith(note);
+    });
+    return img;
+  }
+
+  function photoEditors(paths, onCommit) {
+    var stack = el("div", { class: "photo-stack" });
+    [0, 1, 2].forEach(function (index) {
+      stack.append(pathField("照片 " + (index + 1), paths[index], function (value) {
+        paths[index] = value;
+        onCommit();
+      }));
+      stack.append(localThumb(paths[index]));
+    });
+    return stack;
+  }
+
   function renderBasic(project, onChange) {
     var basic = project.archive.basic;
-    var box = el("div", { class: "card" }, [
+    root.ComplianceStore.migrateVariants(project.archive);
+    var box = el("div", { class: "card", id: "basic-info" }, [
       textField("名称", project.name, function (value) {
         project.name = value || project.name;
         onChange(project);
       }),
       textField("型号", basic.model, function (value) { basic.model = value; onChange(project); }),
-      textField("型号变体（用顿号分隔）", (basic.variants || []).join("、"), function (value) {
-        basic.variants = value.split("、").map(function (item) { return item.trim(); }).filter(Boolean);
-        onChange(project);
-      }),
-      pathField("照片的 Dropbox 路径", basic.photoPath, function (value) { basic.photoPath = value; onChange(project); }),
-      selectField("状态", basic.status, STATUSES, function (value) { basic.status = value; onChange(project); }),
-      textField("状态说明", basic.statusNote, function (value) { basic.statusNote = value; onChange(project); }),
+      el("p", { class: "help" }, ["主型号单独填写，不占变体行。变体默认 6 行，空型号不进入状态和铭牌。"]),
+      pathField("主型号照片的 Dropbox 路径", basic.photoPath, function (value) { basic.photoPath = value; onChange(project); refresh(); }),
     ]);
-    ["EU", "CA", "US"].forEach(function (code) {
-      box.append(dateField(code + " 上市日期", basic.launchDates[code], function (value) {
-        basic.launchDates[code] = value;
-        onChange(project);
-      }));
+    if (basic.photoPath) box.append(localThumb(basic.photoPath));
+    var table = el("table", { class: "bands variant-table", id: "variant-table" });
+    table.append(el("caption", {}, ["型号变体"]));
+    var head = el("tr");
+    ["变体型号", "屏幕尺寸", "照片", ""].forEach(function (label) { head.append(el("th", {}, [label])); });
+    var body = el("tbody");
+    (basic.variantRows || []).forEach(function (row, index) {
+      body.append(el("tr", {}, [
+        el("td", {}, [textField("变体型号", row.model, function (value) {
+          row.model = value.trim();
+          commitVariants(project, onChange, true);
+        })]),
+        el("td", {}, [textField("屏幕尺寸", row.screen, function (value) {
+          row.screen = value;
+          commitVariants(project, onChange, false);
+        })]),
+        el("td", {}, [photoEditors(row.photos, function () { commitVariants(project, onChange, true); })]),
+        el("td", {}, [removeButton(function () {
+          basic.variantRows.splice(index, 1);
+          commitVariants(project, onChange, true);
+        })]),
+      ]));
     });
+    table.append(el("thead", {}, [head]), body);
+    box.append(el("div", { class: "table-scroll" }, [table]));
+    box.append(addButton("增加变体", function () {
+      basic.variantRows.push(root.ComplianceStore.emptyVariantRow(basic));
+      commitVariants(project, onChange, true);
+    }));
+    var filled = root.ComplianceStore.filledVariants(basic);
+    box.append(el("p", { id: "status-aggregate", class: "note" }, [
+      "产品状态：" + root.ComplianceStore.aggregateStatus(basic) + "。只统计已填写的变体：全部是已上市、只有一部分已上市，或都还没有上市。",
+    ]));
+    var statusTable = el("table", { class: "bands variant-table", id: "variant-status" });
+    statusTable.append(el("caption", {}, ["各变体状态与上市日期"]));
+    var statusHead = el("tr");
+    ["变体型号", "状态", "状态说明", "EU 上市日期", "CA 上市日期", "US 上市日期"].forEach(function (label) {
+      statusHead.append(el("th", {}, [label]));
+    });
+    var statusBody = el("tbody");
+    if (!filled.length) statusBody.append(el("tr", {}, [el("td", { colspan: "6" }, ["先填写变体型号。空行不会出现在这里。"])]));
+    filled.forEach(function (row) {
+      statusBody.append(el("tr", {}, [
+        el("td", {}, [row.model]),
+        el("td", {}, [selectField("状态", row.status || "研发", STATUSES, function (value) {
+          row.status = value;
+          commitVariants(project, onChange, true);
+        })]),
+        el("td", {}, [textField("状态说明", row.statusNote, function (value) {
+          row.statusNote = value;
+          commitVariants(project, onChange, false);
+        })]),
+        el("td", {}, [dateField("EU 上市日期", row.launchDates.EU, function (value) {
+          row.launchDates.EU = value;
+          commitVariants(project, onChange, false);
+        })]),
+        el("td", {}, [dateField("CA 上市日期", row.launchDates.CA, function (value) {
+          row.launchDates.CA = value;
+          commitVariants(project, onChange, false);
+        })]),
+        el("td", {}, [dateField("US 上市日期", row.launchDates.US, function (value) {
+          row.launchDates.US = value;
+          commitVariants(project, onChange, false);
+        })]),
+      ]));
+    });
+    statusTable.append(el("thead", {}, [statusHead]), statusBody);
+    box.append(el("div", { class: "table-scroll" }, [statusTable]));
     var file = el("input", { type: "file", accept: "image/*", id: "thumb-file" });
     file.addEventListener("change", function () {
       var picked = file.files && file.files[0];
@@ -233,10 +335,11 @@
       shrinkImage(picked, function (url) {
         basic.thumbnail = url || "";
         onChange(project);
-        box.querySelector(".thumb-note").textContent = url ? "已保存小缩略图（只在本机）。" : "图片太大，没有保存。请改用 Dropbox 路径。";
+        var note = box.querySelector(".thumb-note");
+        if (note) note.textContent = url ? "已保存小缩略图（只在本机）。" : "图片太大，没有保存。请改用 Dropbox 路径。";
       });
     });
-    box.append(el("label", { class: "attr" }, ["或选择一张小缩略图（不上传）", file]));
+    box.append(el("label", { class: "attr" }, ["或为主型号选择一张小缩略图（不上传）", file]));
     box.append(el("p", { class: "help thumb-note" }, [basic.thumbnail ? "本机已有缩略图。" : "未存缩略图。"]));
     if (basic.thumbnail) box.append(el("img", { src: basic.thumbnail, alt: "产品缩略图", class: "thumb" }));
     return box;
@@ -270,12 +373,12 @@
       el("h3", {}, ["清单要求的证据类型"]),
     ]);
     rows.forEach(function (row) {
-      box.append(el("p", {}, [row.entry.id + "：" + (row.entry.evidence_types || []).join("、")]));
+      box.append(el("p", {}, [requirementTitle(rows, row.entry.id) + "：" + (row.entry.evidence_types || []).join("、")]));
     });
     (project.archive.evidence || []).forEach(function (item, index) {
       var linked = (item.requirementIds || []).map(function (id) {
         var row = rows.filter(function (entry) { return entry.entry.id === id; })[0];
-        return row ? id + " · " + root.ComplianceStore.versionGap(item, row.entry) : id;
+        return row ? requirementTitle(rows, id) + " · " + root.ComplianceStore.versionGap(item, row.entry) : id;
       }).join("；");
       box.append(el("article", { class: "card" }, [
         selectField("类型", item.type, EVIDENCE_TYPES, function (value) { item.type = value; onChange(project); }),
@@ -294,10 +397,12 @@
         }),
         textField("关键参数", item.keyParameters, function (value) { item.keyParameters = value; onChange(project); }),
         textField("结论", item.conclusion, function (value) { item.conclusion = value; onChange(project); }),
-        textField("关联条目", (item.requirementIds || []).join("、"), function (value) {
-          item.requirementIds = value.split("、").map(function (part) { return part.trim(); }).filter(Boolean);
+        textField("关联条目（仍填编号，例如 EU-01）", (item.requirementIds || []).join("、"), function (value) {
+          item.requirementIds = value.split(/[、,，\s]+/).map(function (part) { return part.trim(); }).filter(Boolean);
           onChange(project);
+          refresh();
         }),
+        el("p", { class: "help" }, ["关联名称：" + ((item.requirementIds || []).map(function (id) { return requirementTitle(rows, id); }).join("；") || "未关联条目")]),
         el("p", { class: "help" }, ["版本核对：" + (linked || "未关联条目")]),
         el("p", { class: "path" }, [(item.dropboxPath || "路径待确认") + (item.page ? " 第 " + item.page + " 页" : "")]),
         root.CompliancePaths.buttons(function () { return item.dropboxPath; }),
@@ -414,7 +519,34 @@
   }
 
   function renderLabels(project, rows, onChange) {
-    var box = listEditor(project, project.archive.labels, "添加标签", function () {
+    var basic = project.archive.basic;
+    root.ComplianceStore.migrateVariants(project.archive);
+    var filled = root.ComplianceStore.filledVariants(basic);
+    var box = el("div", { id: "nameplate-variants" });
+    box.append(el("p", { class: "help" }, ["每个已填写的变体一行。铭牌照片各 3 个 Dropbox 路径。变体在基本信息里增删，这里跟着变。"]));
+    var table = el("table", { class: "bands variant-table", id: "nameplate-table" });
+    table.append(el("caption", {}, ["各变体铭牌与标签"]));
+    var head = el("tr");
+    ["变体型号", "铭牌照片", "标签信息"].forEach(function (label) { head.append(el("th", {}, [label])); });
+    var body = el("tbody");
+    if (!filled.length) body.append(el("tr", {}, [el("td", { colspan: "3" }, ["还没有填写变体型号。"])]));
+    filled.forEach(function (row) {
+      var info = el("textarea", { rows: "4" }, [row.labelInfo || ""]);
+      info.addEventListener("change", function () {
+        row.labelInfo = info.value;
+        commitVariants(project, onChange, false);
+      });
+      body.append(el("tr", {}, [
+        el("td", {}, [row.model]),
+        el("td", {}, [photoEditors(row.nameplatePhotos, function () { commitVariants(project, onChange, true); })]),
+        el("td", {}, [el("label", { class: "attr" }, ["标签信息", info])]),
+      ]));
+    });
+    table.append(el("thead", {}, [head]), body);
+    box.append(el("div", { class: "table-scroll" }, [table]));
+    box.append(el("h3", {}, ["其他标签记录"]));
+    box.append(el("p", { class: "help" }, ["原先按条目登记的标签还在这里，不并进变体行，避免把旧路径丢掉。"]));
+    box.append(listEditor(project, project.archive.labels, "添加标签", function () {
       return { name: "待确认", designPath: "", photoPath: "", version: "待确认", requirementIds: [], checkNote: "待确认" };
     }, function (item) {
       var linked = (item.requirementIds || []).map(function (id) {
@@ -422,7 +554,7 @@
         if (!row) return id + "：不在当前适用清单";
         var types = (row.entry.evidence_types || []).join("、");
         var needsPhoto = (row.entry.evidence_types || []).indexOf("标签照片") !== -1;
-        return id + " 要求 " + types + (needsPhoto && !item.photoPath && !item.designPath ? "；路径仍待确认" : "");
+        return requirementTitle(rows, id) + " 要求 " + types + (needsPhoto && !item.photoPath && !item.designPath ? "；路径仍待确认" : "");
       }).join("；");
       return [
         textField("名称", item.name, function (value) { item.name = value; onChange(project); }),
@@ -437,7 +569,7 @@
         textField("核对说明", item.checkNote, function (value) { item.checkNote = value; onChange(project); }),
         el("p", { class: "help" }, [linked || "尚未对照条目"]),
       ];
-    }, onChange);
+    }, onChange));
     return box;
   }
 
@@ -636,12 +768,24 @@
   }
 
   function exportSummary(project, records) {
+    var basic = project.archive.basic;
     var rows = [["市场", "模块", "对比状态", "证据编号", "最近到期"]].concat(records.map(function (record) {
       return [record.market, record.module, MARK[record.status] || record.status, record.evidenceNos, record.expiry || ""];
     }));
+    var variantRows = [
+      ["产品状态", root.ComplianceStore.aggregateStatus(basic)],
+      ["变体型号", "屏幕尺寸", "状态", "状态说明", "EU 上市日期", "CA 上市日期", "US 上市日期", "标签信息"],
+    ].concat(root.ComplianceStore.filledVariants(basic).map(function (row) {
+      return [row.model, row.screen, row.status, row.statusNote, row.launchDates.EU, row.launchDates.CA, row.launchDates.US, row.labelInfo];
+    }));
+    var decisions = [["条目", "决定人", "决定日期", "备注", "决定人和日期已填"]].concat(root.ComplianceStore.waiverRecords(project).map(function (item) {
+      return [item.id, item.decider, item.decidedOn, item.note, item.complete ? "是" : "否"];
+    }));
     downloadXlsx(project.name + "_档案汇总.xlsx", [
       { name: "汇总", rows: rows },
-      { name: "说明", rows: [["免责声明", root.ComplianceStore.DISCLAIMER], ["证据", "只含路径和编号，不含文件"]] },
+      { name: "变体", rows: variantRows },
+      { name: "测试决定", rows: decisions },
+      { name: "说明", rows: [["免责声明", root.ComplianceStore.DISCLAIMER], ["证据", "只含路径和编号，不含文件"], ["测试决定", "领导层决定先不做测试的条目不计入缺失证据"]] },
     ]);
   }
 
@@ -661,6 +805,18 @@
         return [item.market, item.lab, item.start, item.end, item.fee || ""];
       })) },
     ];
+    sheets.push({
+      name: "变体",
+      rows: [["产品状态", pack.statusAggregate || ""]].concat([["变体型号", "屏幕尺寸", "状态", "状态说明", "EU 上市日期", "CA 上市日期", "US 上市日期", "标签信息", "照片", "铭牌照片"]]).concat((pack.variants || []).map(function (row) {
+        return [row.model, row.screen, row.status, row.statusNote, row.launchDates.EU, row.launchDates.CA, row.launchDates.US, row.labelInfo, (row.photos || []).join("；"), (row.nameplatePhotos || []).join("；")];
+      })),
+    });
+    sheets.push({
+      name: "测试决定",
+      rows: [["条目", "决定人", "决定日期", "备注", "决定人和日期已填"]].concat((pack.testDecisions || []).map(function (item) {
+        return [item.id, item.decider, item.decidedOn, item.note, item.complete ? "是" : "否"];
+      })),
+    });
     if (includeSensitive && pack.sensitive) {
       sheets.push({
         name: "成本与供应商",

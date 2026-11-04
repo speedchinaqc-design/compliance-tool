@@ -19,7 +19,7 @@
         if (days != null && days <= 90) expiring.push(project.name + " · " + (item.reportNo || item.type) + " · " + item.expiry + (days <= 30 ? "（30 天内）" : ""));
       });
       ((project.archive && project.archive.comparisons) || []).forEach(function (item) {
-        if (item.status === "差距" || item.status === "缺失") gaps.push(project.name + " · " + item.requirement + " · " + item.status);
+        if (item.status === "差距" || root.ComplianceStore.countsAsMissing(project, item)) gaps.push(project.name + " · " + item.requirement + " · " + item.status);
       });
       Object.keys(project.reviews || {}).forEach(function (id) {
         if (project.reviews[id] && project.reviews[id].status === "需要复核") reviews.push(project.name + " · " + id + " · " + (project.reviews[id].summary || ""));
@@ -40,6 +40,13 @@
     if (library && library.lastBackupError) backup += " " + library.lastBackupError;
     box.append(el("p", { class: library && library.lastBackupAt ? "help" : "note" }, [backup]));
     if (library && library.unsortedCount) box.append(el("p", { class: "note" }, ["待分类文件夹里共有 " + library.unsortedCount + " 个文件，请归类。参考目录不计入正式证据。"]));
+    var waivers = [];
+    projects.forEach(function (project) {
+      root.ComplianceStore.waiverRecords(project).forEach(function (item) {
+        waivers.push(project.name + " · " + item.id + " · 决定人 " + (item.decider || "未填") + " · " + (item.decidedOn || "日期未填"));
+      });
+    });
+    if (waivers.length) box.append(line("领导层决定先不做测试（不计入缺失证据）", waivers));
     var input = el("input", { type: "file", id: "regulation-update-file", accept: ".json,.yaml,.yml,application/json" });
     input.addEventListener("change", function () {
       var file = input.files && input.files[0];

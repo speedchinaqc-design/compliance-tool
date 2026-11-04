@@ -390,7 +390,17 @@ a.button-link {
 
 .workspace-head h2 { margin-bottom: 4px; }
 
-.thumb { max-width: 160px; height: auto; border: 1px solid var(--line); }
+.thumb { max-width: 120px; height: auto; border: 1px solid var(--line); background: white; }
+
+.table-scroll { overflow-x: auto; }
+
+.variant-table input,
+.variant-table select,
+.variant-table textarea { width: 100%; box-sizing: border-box; }
+
+.variant-table .photo-stack { min-width: 220px; }
+
+.variant-table td { min-width: 8rem; }
 
 @media print {
   body.print-archive .top,
