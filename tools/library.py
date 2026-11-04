@@ -42,9 +42,10 @@ TYPE_TO_EVIDENCE = {
     "DOC": "DoC",
     "LBL": "标签照片",
     "CORR": "往来函件",
+    "COC": "材料保证书",
 }
 NAME_RE = re.compile(
-    r"^(?P<model>.+)_(?P<market>EU|CA|US|GEN)_(?P<dimension>00GEN|0[1-8][A-Z]+)_(?P<type>STD|RPT|CERT|DOC|LBL|CORR)_(?P<number>[^_]+)_(?P<date>\d{8})_(?P<version>v[^._]+)$",
+    r"^(?P<model>.+)_(?P<market>EU|CA|US|GEN)_(?P<dimension>00GEN|0[1-8][A-Z]+|10MAT)_(?P<type>STD|RPT|CERT|DOC|LBL|CORR|COC)_(?P<number>[^_]+)_(?P<date>\d{8})_(?P<version>v[^._]+)$",
     re.IGNORECASE,
 )
 
@@ -125,6 +126,7 @@ def ensure_other_folders(dest: Path) -> None:
 
 def ensure_cb_folder(dest: Path) -> None:
     (dest / "GEN" / "04ELEC_电气安全").mkdir(parents=True, exist_ok=True)
+    (dest / "GEN" / "10MAT_材料保证书").mkdir(parents=True, exist_ok=True)
 
 
 def _inside(root: Path, path: Path) -> bool:
@@ -234,9 +236,23 @@ def parse_filename(name: str) -> dict | None:
     if not match:
         return None
     dimension = match.group("dimension").upper()
+    kind = match.group("type").upper()
+    if dimension == "10MAT":
+        date = match.group("date")
+        return {
+            "model": match.group("model"),
+            "market": match.group("market").upper(),
+            "dimension": dimension,
+            "dimensionCode": "10",
+            "typeCode": kind,
+            "evidenceType": TYPE_TO_EVIDENCE.get(kind, "材料保证书"),
+            "number": match.group("number"),
+            "issueDate": f"{date[0:4]}-{date[4:6]}-{date[6:8]}",
+            "version": match.group("version"),
+            "formal": False,
+        }
     if dimension not in CODE_BY_SHORT:
         return None
-    kind = match.group("type").upper()
     date = match.group("date")
     return {
         "model": match.group("model"),
@@ -333,11 +349,11 @@ def to_library_path(root: Path, file_path: Path) -> str | None:
     return "/合规知识库/" + relative
 
 
-def pick_image_files(root: Path) -> dict:
-    """打开本机文件窗口，多选图片。只把合规知识库里面的路径交回页面。"""
+def pick_files(root: Path, images_only: bool = False) -> dict:
+    """打开本机文件窗口。只把合规知识库里面的路径交回页面，不读取文件内容。"""
     if os.environ.get("COMPLIANCE_PICK") == "0":
         return {"ok": True, "files": [], "outside": [], "cancelled": True}
-    chosen = _ask_image_files(root if root.is_dir() else Path.home())
+    chosen = _ask_files(root if root.is_dir() else Path.home(), images_only)
     if chosen is None:
         return {"ok": False, "error": "没能打开文件选择窗口", "files": [], "outside": []}
     files: list[str] = []
@@ -351,8 +367,15 @@ def pick_image_files(root: Path) -> dict:
     return {"ok": True, "files": files, "outside": outside, "cancelled": False}
 
 
-def _ask_image_files(directory: Path) -> list[str] | None:
+def pick_image_files(root: Path) -> dict:
+    """打开本机文件窗口，多选图片。只把合规知识库里面的路径交回页面。"""
+    return pick_files(root, images_only=True)
+
+
+def _ask_files(directory: Path, images_only: bool = True) -> list[str] | None:
     folder = str(directory)
+    image_types = ("Images (*.png;*.jpg;*.jpeg;*.gif;*.webp;*.bmp)",)
+    any_types = ("All (*.*)",)
     try:
         import webview
 
@@ -362,7 +385,7 @@ def _ask_image_files(directory: Path) -> list[str] | None:
                 webview.OPEN_DIALOG,
                 directory=folder,
                 allow_multiple=True,
-                file_types=("Images (*.png;*.jpg;*.jpeg;*.gif;*.webp;*.bmp)",),
+                file_types=image_types if images_only else any_types,
             )
             return [str(item) for item in (picked or [])]
     except Exception:
@@ -379,8 +402,8 @@ def _ask_image_files(directory: Path) -> list[str] | None:
             pass
         picked = filedialog.askopenfilenames(
             initialdir=folder,
-            title="选择图片",
-            filetypes=[("图片", "*.png *.jpg *.jpeg *.gif *.webp *.bmp"), ("全部", "*.*")],
+            title="选择图片" if images_only else "选择文件",
+            filetypes=[("图片", "*.png *.jpg *.jpeg *.gif *.webp *.bmp")] if images_only else [("全部", "*.*")],
         )
         host.destroy()
         return [str(item) for item in picked]

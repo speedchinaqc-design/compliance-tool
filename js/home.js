@@ -15,6 +15,13 @@
     var reviews = [];
     projects.forEach(function (project) {
       var cb = project.archive && project.archive.basic && project.archive.basic.cb;
+      (root.ComplianceStore.materialAlerts ? root.ComplianceStore.materialAlerts(project.archive || {}) : []).forEach(function (note) {
+        expiring.push(project.name + " · " + note);
+      });
+      var cmp = project.archive && root.ComplianceStore.compareSummary ? root.ComplianceStore.compareSummary(project.archive) : null;
+      if (cmp && (cmp.diff || cmp.missing || cmp.unregistered || cmp.expired)) {
+        gaps.push(project.name + " · 关键件比对 不一致 " + cmp.diff + " · 缺失 " + cmp.missing + " · 未登记 " + cmp.unregistered + " · 过期 " + cmp.expired);
+      }
       if (cb && cb.expiry) {
         var cbDays = root.ComplianceStore.daysUntil(cb.expiry);
         if (cbDays != null && cbDays <= 90) expiring.push(project.name + " · CB " + (cb.number || "证书") + " · " + cb.expiry + (cbDays <= 30 ? "（30 天内）" : ""));

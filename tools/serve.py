@@ -22,6 +22,7 @@ from library import (
     library_map,
     local_preview,
     open_folder,
+    pick_files,
     pick_image_files,
     resolve_root,
     scan_model,
@@ -361,6 +362,37 @@ class LocalHandler(SimpleHTTPRequestHandler):
                 store = read_store()
             root = resolve_root(store["settings"].get("dropboxRoot"))
             self._send_json(pick_image_files(root))
+            return
+        if path == "/api/pick-files":
+            try:
+                incoming = self._read_json()
+            except (ValueError, json.JSONDecodeError):
+                incoming = {}
+            with LOCK:
+                store = read_store()
+            root = resolve_root(store["settings"].get("dropboxRoot"))
+            self._send_json(pick_files(root, bool(incoming.get("images"))))
+            return
+        if path in {"/api/extract-components", "/api/extract-material"}:
+            try:
+                incoming = self._read_json()
+            except (ValueError, json.JSONDecodeError) as exc:
+                self._send_json({"ok": False, "error": str(exc)}, 400)
+                return
+            with LOCK:
+                store = read_store()
+            root = resolve_root(store["settings"].get("dropboxRoot"))
+            try:
+                from extract_local import extract_file
+                from library import logical_to_local, _inside
+
+                target = logical_to_local(root, str(incoming.get("path") or ""))
+                if not _inside(root, target) or not target.is_file():
+                    raise ValueError("文件不在 Dropbox 合规知识库里")
+                kind = "components" if path.endswith("components") else "material"
+                self._send_json(extract_file(target, kind))
+            except Exception as exc:
+                self._send_json({"ok": False, "rows": [], "incomplete": True, "needsOcr": False, "message": str(exc)}, 400)
             return
         if path == "/api/open-folder":
             try:

@@ -478,6 +478,37 @@
     basic.statusAggregate = aggregateStatus(basic);
     if (normalizeThumbnails(basic)) changed = true;
     if (normalizeCb(basic)) changed = true;
+    if (normalizeUl(basic)) changed = true;
+    return changed;
+  }
+
+  function normalizeUl(basic) {
+    var source = basic.ul && typeof basic.ul === "object" ? basic.ul : {};
+    var next = blankUl();
+    if (!basic.ul) next.links = ["US-04"];
+    ["fileNo", "ccn", "certType", "standard", "standardVersion", "issueDate", "certificatePath", "reportPath", "followUpPath"].forEach(function (key) {
+      next[key] = String(source[key] || next[key] || "");
+    });
+    if (next.certType !== "Listed" && next.certType !== "Recognized" && next.certType !== "Classified") next.certType = "Listed";
+    next.modelsCovered = normalizeModelNames(source.modelsCovered);
+    next.modelsNote = String(source.modelsNote || "");
+    next.links = Array.isArray(source.links) ? source.links.map(function (item) { return String(item || ""); }).filter(Boolean) : next.links.slice();
+    if (Array.isArray(source.history) && source.history.length) {
+      next.history = source.history.map(function (item) { return blankHistory(item); });
+    } else if (next.fileNo || next.standardVersion || next.certificatePath || next.reportPath) {
+      next.history = [blankHistory({
+        updatedOn: next.issueDate,
+        kind: "其他",
+        number: next.fileNo,
+        standardVersion: next.standardVersion,
+        summary: "由现有 UL 资料迁入",
+        certificatePath: next.certificatePath,
+        reportPath: next.reportPath,
+        readonly: true,
+      })];
+    }
+    var changed = JSON.stringify(basic.ul) !== JSON.stringify(next);
+    basic.ul = next;
     return changed;
   }
 
@@ -509,6 +540,7 @@
       standardVersion: "",
       differences: { EU: "", CA: "", US: "" },
       modelsCovered: [],
+      modelsNote: "",
       issueDate: "",
       expiry: "",
       certificatePath: "",
@@ -516,6 +548,36 @@
       links: [],
       history: [],
     };
+  }
+
+  function blankUl() {
+    return {
+      fileNo: "",
+      ccn: "",
+      certType: "Listed",
+      standard: "",
+      standardVersion: "",
+      modelsCovered: [],
+      modelsNote: "",
+      issueDate: "",
+      certificatePath: "",
+      reportPath: "",
+      followUpPath: "",
+      links: ["US-04"],
+      history: [],
+    };
+  }
+
+  function normalizeModelNames(value) {
+    var names = [];
+    var list = typeof value === "string" ? [value] : (value || []);
+    list.forEach(function (item) {
+      var text = typeof item === "string" ? item : (item && item.name) || "";
+      String(text).split("、").forEach(function (part) {
+        if (part.trim()) names.push(part.trim());
+      });
+    });
+    return names;
   }
 
   function blankHistory(source) {
@@ -544,7 +606,8 @@
       CA: String((source.differences && source.differences.CA) || ""),
       US: String((source.differences && source.differences.US) || ""),
     };
-    next.modelsCovered = Array.isArray(source.modelsCovered) ? source.modelsCovered.map(function (item) { return String(item || "").trim(); }).filter(Boolean) : [];
+    next.modelsCovered = normalizeModelNames(source.modelsCovered);
+    next.modelsNote = String(source.modelsNote || "");
     next.links = Array.isArray(source.links) ? source.links.map(function (item) { return String(item || ""); }).filter(Boolean) : [];
     if (Array.isArray(source.history) && source.history.length) {
       next.history = source.history.map(function (item) { return blankHistory(item); });
@@ -871,10 +934,249 @@
       add("party-" + key, partyLabel(key), parties[key] && parties[key].dropboxPath, "parties");
     });
     add("cb", "CB 证书号", archive.basic.cb && archive.basic.cb.number, "cb");
-    add("bom", "关键件", (archive.bom || []).length, "bom");
+    add("ul", "UL File No.", archive.basic.ul && archive.basic.ul.fileNo, "ul");
+    add("bom", "关键件", (archive.components || archive.bom || []).length, "bom");
+    add("materials", "材料保证书", (archive.materials || []).length, "bom");
     add("evidence", "证据", (archive.evidence || []).length, "evidence");
     var filled = items.filter(function (item) { return item.filled; }).length;
-    return { items: items, filled: filled, total: items.length, label: "已填 " + filled + " / " + items.length + " 项" };
+    return {
+      items: items,
+      filled: filled,
+      total: items.length,
+      label: "已填 " + filled + " / " + items.length + " 项",
+      compare: compareSummary(archive),
+      alerts: materialAlerts(archive),
+    };
+  }
+
+  function blankComponent(source) {
+    source = source || {};
+    return {
+      id: String(source.id || ("cmp-" + Math.random().toString(36).slice(2, 10))),
+      name: String(source.name || source.type || ""),
+      manufacturer: String(source.manufacturer || source.supplier || ""),
+      model: String(source.model || ""),
+      parameters: String(source.parameters || ""),
+      standard: String(source.standard || ""),
+      certMark: String(source.certMark || source.certifications || ""),
+      partNo: String(source.partNo || ""),
+      source: String(source.source || ""),
+      reportNo: String(source.reportNo || ""),
+      page: String(source.page || ""),
+      supplierPath: String(source.supplierPath || ""),
+      expiry: String(source.expiry || ""),
+      legacy: source.legacy || (source.affectedCertificates ? { affectedCertificates: String(source.affectedCertificates) } : null),
+    };
+  }
+
+  function blankMaterial(source) {
+    source = source || {};
+    return {
+      id: String(source.id || ("mat-" + Math.random().toString(36).slice(2, 10))),
+      path: String(source.path || ""),
+      molder: String(source.molder || ""),
+      purchaser: String(source.purchaser || ""),
+      partNo: String(source.partNo || ""),
+      description: String(source.description || ""),
+      quantity: String(source.quantity || ""),
+      specNo: String(source.specNo || ""),
+      moldingDate: String(source.moldingDate || ""),
+      shippingDate: String(source.shippingDate || ""),
+      manufacturer: String(source.manufacturer || ""),
+      designation: String(source.designation || ""),
+      ulFile: String(source.ulFile || ""),
+      flammability: String(source.flammability || ""),
+      additives: String(source.additives || ""),
+      regrind: String(source.regrind || ""),
+      rev: String(source.rev || ""),
+      signed: !!source.signed,
+    };
+  }
+
+  function migrateArchiveExtras(archive) {
+    if (!archive) return false;
+    var changed = false;
+    if (!Array.isArray(archive.components)) {
+      archive.components = (archive.bom || []).map(blankComponent);
+      changed = true;
+    } else {
+      var components = archive.components.map(blankComponent);
+      if (JSON.stringify(components) !== JSON.stringify(archive.components)) {
+        archive.components = components;
+        changed = true;
+      }
+    }
+    if (!Array.isArray(archive.materials)) {
+      archive.materials = [];
+      changed = true;
+    } else {
+      var materials = archive.materials.map(blankMaterial);
+      if (JSON.stringify(materials) !== JSON.stringify(archive.materials)) {
+        archive.materials = materials;
+        changed = true;
+      }
+    }
+    if (!Array.isArray(archive.mappings)) {
+      archive.mappings = [];
+      changed = true;
+    }
+    if (!Array.isArray(archive.componentPreview)) {
+      archive.componentPreview = [];
+      changed = true;
+    }
+    return changed;
+  }
+
+  function normToken(value) {
+    return String(value || "").toLowerCase().replace(/[\s\-_.]/g, "");
+  }
+
+  function compareComponents(archive) {
+    archive = archive || {};
+    var components = archive.components || [];
+    var materials = archive.materials || [];
+    var mappings = archive.mappings || [];
+    var used = {};
+    var rows = [];
+    components.forEach(function (component) {
+      var mapped = mappings.filter(function (item) { return item.componentId === component.id && item.materialId; })[0];
+      var material = mapped ? materials.filter(function (item) { return item.id === mapped.materialId; })[0] : null;
+      var fuzzy = false;
+      if (!material && component.partNo) {
+        material = materials.filter(function (item) { return normToken(item.partNo) && normToken(item.partNo) === normToken(component.partNo); })[0] || null;
+      }
+      if (!material) {
+        material = materials.filter(function (item) {
+          return normToken(item.designation) && normToken(item.designation) === normToken(component.model)
+            && normToken(item.ulFile) && normToken(item.ulFile) === normToken(component.certMark)
+            && normToken(item.manufacturer) && normToken(item.manufacturer) === normToken(component.manufacturer);
+        })[0] || null;
+      }
+      if (!material) {
+        material = materials.filter(function (item) {
+          var score = 0;
+          if (normToken(item.designation) && normToken(item.designation) === normToken(component.model)) score += 1;
+          if (normToken(item.ulFile) && normToken(item.ulFile) === normToken(component.certMark)) score += 1;
+          if (normToken(item.manufacturer) && normToken(item.manufacturer) === normToken(component.manufacturer)) score += 1;
+          return score === 2;
+        })[0] || null;
+        fuzzy = !!material;
+      }
+      if (material) used[material.id] = true;
+      var diffs = [];
+      if (material && !fuzzy) {
+        if (normToken(material.manufacturer) !== normToken(component.manufacturer)) diffs.push("制造商");
+        if (normToken(material.designation) !== normToken(component.model)) diffs.push("型号");
+        if (normToken(material.ulFile) !== normToken(component.certMark)) diffs.push("UL 号");
+        if (normToken(material.flammability) && normToken(component.parameters) && normToken(material.flammability) !== normToken(component.parameters)) diffs.push("防火等级");
+      }
+      var expired = (material && material.shippingDate && monthsSince(material.shippingDate) >= 12) || (component.expiry && daysUntil(component.expiry) != null && daysUntil(component.expiry) < 0);
+      var status = "缺失";
+      if (material && expired) status = "过期";
+      else if (material && fuzzy && !mapped) status = "疑似匹配";
+      else if (material && diffs.length) status = "不一致";
+      else if (material) status = "一致";
+      rows.push({
+        id: component.id,
+        label: component.name || component.partNo || component.model || component.id,
+        status: status,
+        diffs: diffs,
+        fuzzy: status === "疑似匹配",
+        component: component,
+        material: material || null,
+      });
+    });
+    materials.forEach(function (material) {
+      if (used[material.id]) return;
+      rows.push({
+        id: "mat-" + material.id,
+        label: material.partNo || material.designation || material.id,
+        status: "未登记",
+        diffs: [],
+        fuzzy: false,
+        component: null,
+        material: material,
+      });
+    });
+    return rows;
+  }
+
+  function compareSummary(archive) {
+    var counts = { consistent: 0, diff: 0, missing: 0, unregistered: 0, expired: 0, fuzzy: 0 };
+    compareComponents(archive).forEach(function (row) {
+      if (row.status === "一致") counts.consistent += 1;
+      if (row.status === "不一致") counts.diff += 1;
+      if (row.status === "缺失") counts.missing += 1;
+      if (row.status === "未登记") counts.unregistered += 1;
+      if (row.status === "过期") counts.expired += 1;
+      if (row.status === "疑似匹配") counts.fuzzy += 1;
+    });
+    return counts;
+  }
+
+  function monthsSince(isoDate) {
+    var time = Date.parse(isoDate + "T00:00:00");
+    if (Number.isNaN(time)) return null;
+    return (Date.now() - time) / (86400000 * 30.4);
+  }
+
+  function materialAlerts(archive) {
+    var notes = [];
+    var latest = {};
+    (archive.materials || []).forEach(function (item) {
+      var key = normToken(item.partNo) + "|" + normToken(item.molder || item.manufacturer);
+      var when = item.shippingDate || item.moldingDate;
+      if (when && (!latest[key] || when > latest[key])) latest[key] = when;
+      if (!item.signed) notes.push((item.partNo || "未填料号") + " 保证书未签章，无效需补");
+      var regrind = parseFloat(item.regrind);
+      if (!Number.isNaN(regrind) && regrind > 25) notes.push((item.partNo || item.designation || "材料") + " 二次料 " + item.regrind + "%，超过 25%");
+      if (!item.partNo || !item.manufacturer || !item.ulFile) notes.push((item.partNo || item.description || "材料保证书") + " 不完整");
+      if (item.shippingDate && !item.path) notes.push((item.partNo || "批次") + " " + item.shippingDate + " 缺批次保证书");
+    });
+    Object.keys(latest).forEach(function (key) {
+      var age = monthsSince(latest[key]);
+      if (age == null) return;
+      var label = key.split("|")[0] || "料号";
+      if (age >= 12) notes.push(label + " 保证书已过期（" + latest[key] + "）");
+      else if (age >= 11) notes.push(label + " 保证书即将到期（" + latest[key] + "）");
+    });
+    (archive.components || []).forEach(function (item) {
+      var days = daysUntil(item.expiry);
+      if (days != null && days <= 90) notes.push((item.name || item.partNo || "关键件") + " 证书" + (days < 0 ? "已过期" : "将在 " + days + " 天内到期"));
+    });
+    return notes;
+  }
+
+  function ensureCompareTodos(project) {
+    if (!project || !project.archive) return false;
+    project.todos = project.todos || [];
+    var changed = false;
+    compareComponents(project.archive).forEach(function (row) {
+      if (row.status !== "不一致" && row.status !== "未登记") return;
+      var key = "cmp:" + row.id;
+      if (project.todos.some(function (item) { return item.key === key; })) return;
+      project.todos.push({
+        key: key,
+        kind: "compare",
+        sourceId: row.id,
+        title: "评估是否需向 CB/UL 报备 · " + row.label,
+        conclusion: "待定",
+        skipReason: "",
+        note: row.status,
+        decider: "",
+        decidedOn: "",
+        owner: "",
+        due: "",
+        progress: "未开始",
+        evidenceIds: [],
+        expiry: "",
+        priorConclusion: "",
+        cancelReason: "",
+        legacy: null,
+      });
+      changed = true;
+    });
+    return changed;
   }
 
   function blankArchive() {
@@ -888,6 +1190,7 @@
       statusNote: "",
       launchDates: { EU: "", CA: "", US: "" },
       cb: blankCb(),
+      ul: blankUl(),
     };
     basicSeed.variantRows = [0, 1, 2, 3, 4, 5].map(function () { return emptyVariantRow(basicSeed); });
     basicSeed.statusAggregate = "未上市";
@@ -898,6 +1201,10 @@
       comparisons: [],
       changelog: [],
       bom: [],
+      components: [],
+      materials: [],
+      mappings: [],
+      componentPreview: [],
       labels: [],
       manuals: [],
       parties: {
@@ -1048,6 +1355,7 @@
       created = true;
     }
     var migrated = migrateVariants(project.archive);
+    if (migrateArchiveExtras(project.archive)) migrated = true;
     return created || migrated;
   }
 
@@ -1325,6 +1633,11 @@
     waiverRecords: waiverRecords,
     countsAsMissing: countsAsMissing,
     screenSummary: screenSummary,
+    compareComponents: compareComponents,
+    compareSummary: compareSummary,
+    materialAlerts: materialAlerts,
+    ensureCompareTodos: ensureCompareTodos,
+    blankUl: blankUl,
     moduleLabel: moduleLabel,
     CB_MODULE_ID: CB_MODULE_ID,
     readCheck: readCheck,

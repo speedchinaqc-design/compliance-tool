@@ -273,4 +273,22 @@ assert(store.migrateVariants(cbArch) === true);
 assert(cbArch.basic.cb.history.length === 1 && cbArch.basic.cb.history[0].readonly && cbArch.basic.cb.history[0].number === "CB123" && cbArch.basic.cb.history[0].summary === "由现有 CB 资料迁入");
 const historyId = cbArch.basic.cb.history[0].id;
 assert(store.migrateVariants(cbArch) === false && cbArch.basic.cb.history[0].id === historyId, "CB 履历不能每次换新");
+
+const parts = store.blankArchive();
+parts.components = [{
+  id: "c1", name: "保险丝", manufacturer: "Littelfuse", model: "0215", parameters: "V-0", standard: "",
+  certMark: "E10480", partNo: "F1", source: "UL", reportNo: "R1", page: "3", supplierPath: "", expiry: "", legacy: null,
+}];
+parts.materials = [{
+  id: "m1", path: "/合规知识库/a.pdf", molder: "A", purchaser: "", partNo: "F1", description: "", quantity: "",
+  specNo: "", moldingDate: "", shippingDate: "2020-01-01", manufacturer: "其他厂", designation: "0215",
+  ulFile: "E99999", flammability: "V-0", additives: "", regrind: "30", rev: "", signed: false,
+}];
+const partRows = store.compareComponents(parts);
+assert(partRows[0].status === "过期" || partRows[0].status === "不一致", "料号相同但资料不符");
+assert(store.materialAlerts(parts).some((note) => note.indexOf("超过 25%") !== -1));
+assert(store.materialAlerts(parts).some((note) => note.indexOf("未签章") !== -1));
+const orphan = store.blankArchive();
+orphan.materials = [{ id: "m2", path: "", molder: "", purchaser: "", partNo: "X", description: "", quantity: "", specNo: "", moldingDate: "", shippingDate: "", manufacturer: "厂", designation: "ABS", ulFile: "E1", flammability: "V-0", additives: "", regrind: "", rev: "", signed: true }];
+assert(store.compareComponents(orphan).some((row) => row.status === "未登记"));
 console.log("project tests passed");

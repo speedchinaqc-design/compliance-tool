@@ -25,6 +25,9 @@ def main() -> None:
         assert made["created"] and (root / "02_产品" / "UNI-8" / "EU" / "08METRO_法制计量" / "readme.txt").is_file()
         assert (root / "02_产品" / "UNI-8" / "09_其他资料" / "待分类").is_dir()
         assert (root / "02_产品" / "UNI-8" / "GEN" / "04ELEC_电气安全").is_dir()
+        assert (root / "02_产品" / "UNI-8" / "GEN" / "10MAT_材料保证书").is_dir()
+        material_name = parse_filename("UNI-8_GEN_10MAT_COC_PN1_20260301_V1.pdf")
+        assert material_name and material_name["formal"] is False and material_name["evidenceType"] == "材料保证书"
         unsorted = root / "02_产品" / "UNI-8" / "09_其他资料" / "待分类" / "loose.pdf"
         unsorted.write_bytes(b"x")
         reference = root / "02_产品" / "UNI-8" / "09_其他资料" / "参考" / "UNI-8_GEN_00GEN_RPT_CB12345_20260301_v1.pdf"

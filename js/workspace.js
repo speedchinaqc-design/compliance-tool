@@ -71,6 +71,7 @@
     });
     page.append(tabs);
     if (root.ComplianceStore.syncTodos(project, todoSources(project))) onChange(project);
+    if (project.archive && root.ComplianceStore.ensureCompareTodos(project)) onChange(project);
     var body = el("div", { id: "workspace-body" });
     if (tab === "checklist") body.append(renderChecklist(project, onChange));
     if (tab === "modules") body.append(renderModules(project));
@@ -92,11 +93,16 @@
     if (!rows.length) wrap.append(el("p", { class: "empty" }, ["当前市场、模块和问答下没有适用条目。"]));
     rows.forEach(function (row) { wrap.append(card(project, row, onChange)); });
     wrap.append(cbChecklistCard(project, rows, onChange));
+    wrap.append(schemeChecklistCard(project, rows, onChange, "UL"));
     (project.customEntries || []).forEach(function (item) {
       if (!item || item.removed) return;
       wrap.append(customCard(project, item, onChange));
     });
     wrap.append(customForm(project, onChange));
+    if (root.ComplianceFold) {
+      wrap.insertBefore(root.ComplianceFold.toolbar(), wrap.firstChild);
+      root.ComplianceFold.apply(wrap, project);
+    }
     return wrap;
   }
 
@@ -185,6 +191,7 @@
   function todoSources(project) {
     var sources = [];
     sources.push({ key: "req:GEN-CB", kind: "checklist", sourceId: "GEN-CB", title: "GEN-CB CB 体系" });
+    sources.push({ key: "req:GEN-UL", kind: "checklist", sourceId: "GEN-UL", title: "GEN-UL UL 体系" });
     rowsFor(project).forEach(function (row) {
       sources.push({
         key: "req:" + row.entry.id,
@@ -338,6 +345,32 @@
       render(document.getElementById("app"), project, "checklist", onChange, root.__workspaceBack, root.__workspaceWizard);
     }
     article.append(statusControls(project, "GEN-CB", onChange, rerenderChecklist));
+    return article;
+  }
+
+  function schemeChecklistCard(project, rows, onChange, kind) {
+    root.ComplianceStore.ensureArchive(project);
+    var record = project.archive.basic.ul;
+    var article = el("article", { class: "card", id: "row-GEN-UL" }, [
+      el("div", { class: "card-kicker" }, [
+        el("span", { class: "market" }, ["通用"]),
+        el("span", { class: "status status-pending" }, ["UL 体系"]),
+      ]),
+      el("h3", {}, ["GEN-UL UL 体系"]),
+      el("p", { class: "help" }, ["每个产品都有这一行。File No.、签发日期和证书路径与档案里的 UL 页是同一份。"]),
+    ]);
+    article.append(textField("File No.", record.fileNo, function (value) { record.fileNo = value; onChange(project); }));
+    article.append(el("p", {}, [el("a", { href: "https://productiq.ulprospector.com/", target: "_blank", rel: "noopener noreferrer" }, ["打开 UL Product iQ"])]));
+    article.append(dateField("签发日期", record.issueDate, function (value) { record.issueDate = value; onChange(project); }));
+    article.append(pathField("证书 Dropbox 路径", record.certificatePath, function (value) { record.certificatePath = value; onChange(project); }));
+    var row = rows.filter(function (entry) { return entry.entry.id === "US-04"; })[0];
+    if (row && record.standardVersion && (record.links || []).indexOf("US-04") !== -1) {
+      var gap = root.ComplianceStore.versionGap({ standardVersion: record.standardVersion }, row.entry);
+      if (gap === "版本可能不一致") article.append(el("p", { class: "note" }, ["US-04：标准版本" + gap + "（" + record.standardVersion + "）"]));
+    }
+    article.append(statusControls(project, "GEN-UL", onChange, function () {
+      render(document.getElementById("app"), project, "checklist", onChange, root.__workspaceBack, root.__workspaceWizard);
+    }));
     return article;
   }
 
