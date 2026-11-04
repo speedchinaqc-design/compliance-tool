@@ -153,6 +153,72 @@ def check_markets(markets: dict[str, dict], product: dict, errors: list[str]) ->
                     errors.append(f"{entry['id']} 不应包含加拿大复函。")
 
 
+EXPECTED_MODULES = {
+    "EU-01": ["CRA"],
+    "EU-02": ["电子产品"],
+    "EU-03": ["CRA"],
+    "EU-04": ["电子产品"],
+    "EU-05": ["电子产品"],
+    "EU-06": ["电子产品"],
+    "EU-07": ["电池"],
+    "EU-08": ["计量"],
+    "US-01": ["CRA"],
+    "US-02": ["电子产品"],
+    "US-03": ["CRA"],
+    "US-04": ["电子产品"],
+    "US-05": ["电子产品", "FCC/ISED"],
+    "US-06": ["FCC/ISED"],
+    "US-07": ["电池"],
+    "US-08": ["计量"],
+    "CA-01": ["CRA"],
+    "CA-02": ["电子产品"],
+    "CA-03": ["CRA"],
+    "CA-04": ["电子产品"],
+    "CA-05": ["电子产品", "FCC/ISED"],
+    "CA-06": ["FCC/ISED"],
+    "CA-07": ["电池"],
+    "CA-08": ["计量"],
+}
+
+
+def known_urls(markets: dict[str, dict]) -> set[str]:
+    found = set()
+    for document in markets.values():
+        for dimension in document["dimensions"]:
+            for entry in dimension["entries"]:
+                found.add(entry["source_url"])
+                for source in entry.get("additional_sources") or []:
+                    found.add(source["url"])
+    return found
+
+
+def check_modules(markets: dict[str, dict], catalog: dict, questions: dict, errors: list[str]) -> None:
+    ids = [item["id"] for item in catalog["modules"]]
+    if ids != ["电子产品", "电池", "CRA", "FCC/ISED", "计量"]:
+        errors.append("模块顺序应为：电子产品、电池、CRA、FCC/ISED、计量。")
+    if catalog.get("phase_markets") != ["EU", "CA", "US"]:
+        errors.append("第一期市场只能是 EU、CA、US。")
+    seen = {}
+    for document in markets.values():
+        for dimension in document["dimensions"]:
+            for entry in dimension["entries"]:
+                seen[entry["id"]] = entry.get("modules")
+    if seen != EXPECTED_MODULES:
+        errors.append("条目上的模块标记与第一期归类表不一致。")
+    urls = known_urls(markets)
+    qids = set()
+    for question in questions["questions"]:
+        if question["id"] in qids:
+            errors.append(f"向导问题 id 重复：{question['id']}")
+        qids.add(question["id"])
+        if question["type"] == "enum" and not question.get("options"):
+            errors.append(f"向导问题 {question['id']} 缺少选项。")
+        for source in question["sources"]:
+            url = source.get("url")
+            if url and url not in urls:
+                errors.append(f"向导问题 {question['id']} 的来源不在市场 YAML 中：{url}")
+
+
 def check_evidence(evidence: dict, markets: dict[str, dict], errors: list[str]) -> None:
     known = {
         entry["id"]
@@ -178,10 +244,12 @@ def check_forbidden_files(errors: list[str]) -> None:
             errors.append(f"仓库中有不允许提交的文件：{path.relative_to(ROOT)}")
 
 
-def build_payload(product: dict, evidence: dict, markets: dict[str, dict]) -> dict:
+def build_payload(product: dict, evidence: dict, markets: dict[str, dict], catalog: dict, questions: dict) -> dict:
     return {
         "product": product,
         "evidence": evidence,
+        "modules": catalog["modules"],
+        "questions": questions["questions"],
         "markets": [markets[code] for code in product["market_order"]],
     }
 
@@ -200,28 +268,33 @@ def main() -> None:
         market_validator = load_schema("market.schema.json")
         product_validator = load_schema("product.schema.json")
         evidence_validator = load_schema("evidence.schema.json")
+        catalog_validator = load_schema("catalog.schema.json")
     except (OSError, json.JSONDecodeError, ValidationError) as exc:
         fail([f"无法读取 JSON Schema：{exc}"])
 
     try:
         product = load_yaml(DATA / "product.yaml")
         evidence = load_yaml(DATA / "evidence.yaml")
+        catalog = load_yaml(DATA / "modules.yaml")
+        questions = load_yaml(DATA / "questions.yaml")
         markets = {code: load_yaml(path) for code, path in MARKET_FILES.items()}
     except (OSError, yaml.YAMLError) as exc:
         fail([f"无法读取 YAML：{exc}"])
 
     check_schema(product_validator, product, "product.yaml", errors)
     check_schema(evidence_validator, evidence, "evidence.yaml", errors)
+    check_schema(catalog_validator, {"modules": catalog, "questions": questions}, "modules.yaml / questions.yaml", errors)
     for code, document in markets.items():
         check_schema(market_validator, document, f"{code}.yaml", errors)
     if not errors:
         check_markets(markets, product, errors)
         check_evidence(evidence, markets, errors)
+        check_modules(markets, catalog, questions, errors)
     check_forbidden_files(errors)
     if errors:
         fail(errors)
 
-    payload = build_payload(product, evidence, markets)
+    payload = build_payload(product, evidence, markets, catalog, questions)
     rendered = render_data_js(payload)
     JS_DATA.parent.mkdir(parents=True, exist_ok=True)
     current = JS_DATA.read_text(encoding="utf-8") if JS_DATA.exists() else ""

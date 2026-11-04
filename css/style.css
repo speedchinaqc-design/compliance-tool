@@ -347,6 +347,40 @@ button.ghost { background: transparent; color: var(--accent); border: 1px solid 
 
 .empty { padding: 20px; background: var(--paper); }
 
+.disclaimer {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: #fff4f1;
+  border: 1px solid #e3c7c3;
+  color: #6a2e28;
+}
+
+.wizard, #project-list, #workspace { max-width: 920px; }
+
+.steps { display: flex; gap: 8px; flex-wrap: wrap; padding: 0; margin: 0 0 14px; list-style: none; }
+
+.steps li { padding: 4px 8px; border: 1px solid var(--line); background: white; font-size: 13px; }
+
+.steps li.on { background: var(--accent); color: white; border-color: var(--accent); }
+
+#app { max-width: 1100px; margin: 0 auto; padding: 16px 28px 48px; }
+
+.choice { display: flex; gap: 8px; align-items: flex-start; background: white; border: 1px solid var(--line); padding: 8px 10px; margin: 6px 0; }
+
+.choice-block span { display: flex; flex-direction: column; }
+
+.question { margin: 0 0 12px; padding: 12px; border: 1px solid var(--line); background: var(--paper); }
+
+.question legend { font-weight: 650; padding: 0 4px; }
+
+.wizard-bar, .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+
+.tabs button { background: white; color: var(--accent); border: 1px solid var(--accent); }
+
+.tabs button.on { background: var(--accent); color: white; }
+
+.workspace-head h2 { margin-bottom: 4px; }
+
 @media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; padding: 12px; }
   .panel { position: static; max-height: none; }

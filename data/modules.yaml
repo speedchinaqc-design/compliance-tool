@@ -1,0 +1,17 @@
+# 第一期模块。只给现有欧盟、加拿大、美国条目归类，不新增法规。
+schema_version: 1
+phase_markets:
+- EU
+- CA
+- US
+modules:
+- id: 电子产品
+  summary: 电气安全、EMC、包装等已写在矩阵里的产品要求。第一期没有单独的 RoHS 或 WEEE 格子，这里不补写。
+- id: 电池
+  summary: 纽扣电池。加拿大按 Health Canada 复函 26-005366-600，商用不自动豁免。
+- id: CRA
+  summary: 网络安全与数据安全这一组。欧盟格子里同时写了 RED 授权法规和 CRA。美国、加拿大的对应格子不是 CRA 法规本身，只是归入这一组方便筛选。
+- id: FCC/ISED
+  summary: 美国 FCC 与加拿大 ISED 的无线和 EMC 授权。欧盟的无线与 EMC 仍放在「电子产品」。
+- id: 计量
+  summary: 贸易结算用法制计量。欧盟 NAWI、加拿大 Measurement Canada、美国 NIST/NTEP，均来自现有矩阵。

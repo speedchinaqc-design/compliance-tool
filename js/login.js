@@ -108,7 +108,7 @@
 
   function resetLocal() {
     var ok = window.confirm(
-      "确定重置本机密码？\n\n这会清掉这台浏览器里为本工具保存的用户名、密码哈希，以及「已看过」标记。\n不会删除 YAML，也不会动 Dropbox。\n\n重置后需要重新设置用户名和密码。"
+      "确定重置本机密码？\n\n这会清掉这台浏览器里为本工具保存的用户名、密码哈希、产品项目和进度。\n不会删除 YAML，也不会动 Dropbox。导出的 JSON 备份不受影响。\n\n重置后需要重新设置用户名和密码。"
     );
     if (!ok) return;
     auth.clearLocalData();

@@ -69,6 +69,7 @@
       entry.label_requirements,
       entry.source_url,
       entry.status,
+      (entry.modules || []).join(" "),
       (row.notes || []).join(" "),
     ]
       .join("\n")
@@ -92,6 +93,13 @@
         const decision = applies(dimension, state.attrs);
         if (state.view === "checklist" && !decision.ok) return;
         dimension.entries.forEach(function (entry) {
+          if (Array.isArray(state.modules)) {
+            const mods = entry.modules || [];
+            const hit = mods.some(function (mod) {
+              return state.modules.indexOf(mod) !== -1;
+            });
+            if (!hit) return;
+          }
           const paths = pathsFor(product, market.market, dimension);
           const row = {
             marketCode: market.market,
@@ -145,6 +153,7 @@
       "维度代码",
       "维度",
       "矩阵键",
+      "模块",
       "进入适用清单",
       "不适用原因",
       "视情况",
@@ -172,6 +181,7 @@
         row.dimension.dimension_code,
         row.dimension.name_zh,
         row.matrixKey,
+        (entry.modules || []).join("、"),
         row.applies ? "是" : "否",
         row.applyReason || "",
         row.conditional ? row.conditional.label : "",

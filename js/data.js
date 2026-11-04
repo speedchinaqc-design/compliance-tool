@@ -188,6 +188,269 @@
     "notice": "entries 只保存 Dropbox 路径和编号。当前没有登记真实文件。规划书命名举例 UNI-8_EU_08METRO_CERT_TC1234_20260115_v1.pdf 不是真实证书，因此不列入 entries。",
     "entries": []
   },
+  "modules": [
+    {
+      "id": "电子产品",
+      "summary": "电气安全、EMC、包装等已写在矩阵里的产品要求。第一期没有单独的 RoHS 或 WEEE 格子，这里不补写。"
+    },
+    {
+      "id": "电池",
+      "summary": "纽扣电池。加拿大按 Health Canada 复函 26-005366-600，商用不自动豁免。"
+    },
+    {
+      "id": "CRA",
+      "summary": "网络安全与数据安全这一组。欧盟格子里同时写了 RED 授权法规和 CRA。美国、加拿大的对应格子不是 CRA 法规本身，只是归入这一组方便筛选。"
+    },
+    {
+      "id": "FCC/ISED",
+      "summary": "美国 FCC 与加拿大 ISED 的无线和 EMC 授权。欧盟的无线与 EMC 仍放在「电子产品」。"
+    },
+    {
+      "id": "计量",
+      "summary": "贸易结算用法制计量。欧盟 NAWI、加拿大 Measurement Canada、美国 NIST/NTEP，均来自现有矩阵。"
+    }
+  ],
+  "questions": [
+    {
+      "id": "product_function",
+      "prompt": "产品功能是什么？",
+      "type": "text",
+      "placeholder": "例如：非自动衡器，计价贴标",
+      "modules": [],
+      "basis": "样板产品在规划书里是非自动衡器、计价贴标，准确度等级写的是「推断 III 级」。功能若不同，不能直接套用这 24 格。这里只记录你的说明，不新增法规。",
+      "sources": [
+        {
+          "label": "样板产品原文（data/product.yaml，不是法规链接）"
+        }
+      ]
+    },
+    {
+      "id": "materials",
+      "prompt": "主要材料和部件有哪些？",
+      "type": "text",
+      "placeholder": "待确认。规划书没有列出材料清单",
+      "modules": [],
+      "basis": "包装、电气安全和电池都和实物构成有关。规划书没有给出 UNI-8 的材料或部件清单，所以默认留空，标为待确认。",
+      "sources": [
+        {
+          "label": "欧盟包装",
+          "url": "https://eur-lex.europa.eu/eli/reg/2025/40/oj"
+        },
+        {
+          "label": "欧盟电气安全（RED）",
+          "url": "https://eur-lex.europa.eu/eli/dir/2014/53/oj"
+        }
+      ]
+    },
+    {
+      "id": "voltage",
+      "prompt": "供电电压是多少？",
+      "type": "text",
+      "placeholder": "100–240 V AC",
+      "modules": [
+        "电子产品"
+      ],
+      "basis": "样板产品写的是 100–240 V AC。电气安全三格按带电产品编写。若电压不同，请自行确认是否仍落在同一格，工具不改法规名称。",
+      "sources": [
+        {
+          "label": "欧盟 RED 安全",
+          "url": "https://eur-lex.europa.eu/eli/dir/2014/53/oj"
+        },
+        {
+          "label": "美国 OSHA / NRTL",
+          "url": "https://www.osha.gov/nationally-recognized-testing-laboratory-program"
+        },
+        {
+          "label": "加拿大 SCC",
+          "url": "https://www.scc-ccn.ca/"
+        }
+      ]
+    },
+    {
+      "id": "has_wifi",
+      "prompt": "是否有 Wi-Fi（2.4 GHz 与 5 GHz）？",
+      "type": "boolean",
+      "modules": [
+        "电子产品",
+        "FCC/ISED"
+      ],
+      "basis": "未勾选时，无线维度不进入适用清单。欧盟 EMC 和电气安全格子按 RED 编写，关掉 Wi-Fi 后应改用哪一项指令，规划书没有写。5 GHz 限制以各市场矩阵原文和第四节表为准，两处不合并成新结论。",
+      "sources": [
+        {
+          "label": "欧盟无线",
+          "url": "https://www.etsi.org/"
+        },
+        {
+          "label": "美国 Part 15",
+          "url": "https://www.ecfr.gov/current/title-47/chapter-I/subchapter-A/part-15"
+        },
+        {
+          "label": "加拿大 ISED",
+          "url": "https://ised-isde.canada.ca/site/spectrum-management-telecommunications/en"
+        }
+      ]
+    },
+    {
+      "id": "has_battery",
+      "prompt": "是否有纽扣电池？",
+      "type": "boolean",
+      "modules": [
+        "电池"
+      ],
+      "basis": "未勾选时，电池维度不进入适用清单。样板产品写的是纽扣电池。",
+      "sources": [
+        {
+          "label": "欧盟电池法规页面",
+          "url": "https://single-market-economy.ec.europa.eu/single-market/goods/european-standards/harmonised-standards/eu-battery-regulation_en"
+        },
+        {
+          "label": "加拿大纽扣电池咨询页（矩阵来源）",
+          "url": "https://www.canada.ca/en/services/health/consultations/consultation-comment-period-danger-human-health-safety-assessment-products-containing-button-coin-batteries-packaging/document.html"
+        },
+        {
+          "label": "美国 Reese's Law 页面",
+          "url": "https://www.cpsc.gov/Business--Manufacturing/Business-Education/Business-Guidance/Reeses-Law"
+        }
+      ]
+    },
+    {
+      "id": "battery_mount",
+      "prompt": "纽扣电池是焊接固定、可拆卸，还是尚未确认？",
+      "type": "enum",
+      "modules": [
+        "电池"
+      ],
+      "show_when": {
+        "has_battery": true
+      },
+      "options": [
+        {
+          "id": "unknown",
+          "label": "未知（计划书未确认）"
+        },
+        {
+          "id": "soldered",
+          "label": "焊接固定"
+        },
+        {
+          "id": "removable",
+          "label": "可拆卸"
+        }
+      ],
+      "basis": "复函编号 26-005366-600。加拿大这一格和复函要点没有把焊接写成豁免，不要把规划书里澳洲的焊接豁免套到加拿大。欧盟法规名写有可拆卸（第 11 条，2027-02-18），没有写焊接固定就可以不适用。美国电池格的状态仍是待核实，安装方式不改变该状态。本项只改变提示。",
+      "sources": [
+        {
+          "label": "加拿大矩阵来源",
+          "url": "https://www.canada.ca/en/services/health/consultations/consultation-comment-period-danger-human-health-safety-assessment-products-containing-button-coin-batteries-packaging/document.html"
+        },
+        {
+          "label": "复函引用的执法指南（复函本身非公开）",
+          "url": "https://www.canada.ca/en/health-canada/services/consumer-product-safety/legislation-guidelines/guidelines-policies/information-regulated-parties-enforcement-approach-general-prohibitions.html"
+        },
+        {
+          "label": "欧盟电池法规页面",
+          "url": "https://single-market-economy.ec.europa.eu/single-market/goods/european-standards/harmonised-standards/eu-battery-regulation_en"
+        }
+      ]
+    },
+    {
+      "id": "commercial_form_note",
+      "prompt": "是否已留存书面分析：产品形态和功能是否明显属于商用？",
+      "type": "enum",
+      "modules": [
+        "电池"
+      ],
+      "markets": [
+        "CA"
+      ],
+      "show_when": {
+        "has_battery": true
+      },
+      "options": [
+        {
+          "id": "尚未分析",
+          "label": "尚未分析"
+        },
+        {
+          "id": "已留存书面分析",
+          "label": "已留存书面分析"
+        }
+      ],
+      "basis": "复函编号 26-005366-600：商用不自动排除；须在形态和功能上明显属商用才可能在 CCPSA 之外；“仅限商用”标签本身不豁免；是否适用由 Health Canada 逐案判断。本项只记录你有没有留下分析，不把状态改成不适用。",
+      "sources": [
+        {
+          "label": "加拿大矩阵来源",
+          "url": "https://www.canada.ca/en/services/health/consultations/consultation-comment-period-danger-human-health-safety-assessment-products-containing-button-coin-batteries-packaging/document.html"
+        }
+      ]
+    },
+    {
+      "id": "legal_for_trade",
+      "prompt": "是否用于贸易结算（法制计量）？",
+      "type": "boolean",
+      "modules": [
+        "计量"
+      ],
+      "basis": "未勾选时，法制计量不进入适用清单。样板是计价贴标秤。准确度等级在规划书中是「推断 III 级」，不是已确认的型式批准等级。",
+      "sources": [
+        {
+          "label": "欧盟 NAWI",
+          "url": "https://eur-lex.europa.eu/eli/dir/2014/31/oj"
+        },
+        {
+          "label": "美国 NTEP",
+          "url": "https://www.ncwm.com/ntep"
+        },
+        {
+          "label": "加拿大型式批准",
+          "url": "https://ised-isde.canada.ca/site/measurement-canada/en/type-approval/apply-type-approval-scales-or-scale-components"
+        }
+      ]
+    },
+    {
+      "id": "b2b_login_only",
+      "prompt": "是否只通过需要 B2B 账号登录的渠道销售？",
+      "type": "boolean",
+      "modules": [
+        "电池",
+        "电子产品"
+      ],
+      "basis": "复函编号 26-005366-600：只通过需 B2B 账号登录的渠道销售、不上架公开零售或无登录网店，是规划书里的建议。商用不自动排除；在对公众开放的商店或无需 B2B 登录的网店销售，即可合理预期个人可获得；“仅限商用”标签本身不豁免。美国包装格写明 B2B 适用性待核实，不因本题答案改成已核实。",
+      "sources": [
+        {
+          "label": "加拿大矩阵来源",
+          "url": "https://www.canada.ca/en/services/health/consultations/consultation-comment-period-danger-human-health-safety-assessment-products-containing-button-coin-batteries-packaging/document.html"
+        },
+        {
+          "label": "美国州包装 EPR",
+          "url": "https://calrecycle.ca.gov/packaging/packaging-epr/"
+        }
+      ]
+    },
+    {
+      "id": "processes_personal_data",
+      "prompt": "是否处理个人数据？",
+      "type": "boolean",
+      "modules": [
+        "CRA"
+      ],
+      "basis": "数据保护在规划书里是「视情况」。不勾选时条目仍列出，并标明当前未声明会处理个人数据。这不把美国或加拿大的隐私法写成欧盟 CRA。",
+      "sources": [
+        {
+          "label": "GDPR",
+          "url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj"
+        },
+        {
+          "label": "CCPA",
+          "url": "https://oag.ca.gov/privacy/ccpa"
+        },
+        {
+          "label": "PIPEDA 入口",
+          "url": "https://www.priv.gc.ca/"
+        }
+      ]
+    }
+  ],
   "markets": [
     {
       "schema_version": 1,
@@ -206,6 +469,9 @@
           "entries": [
             {
               "id": "EU-01",
+              "modules": [
+                "CRA"
+              ],
               "regulation_name": "RED 授权法规 (EU) 2022/30（2025-08-01 起，EN 18031-1）；CRA (EU) 2024/2847（报告义务 2026-09-11，全面 2027-12-11）",
               "standard_numbers": [
                 "EN 18031-1"
@@ -231,6 +497,9 @@
           "entries": [
             {
               "id": "EU-02",
+              "modules": [
+                "电子产品"
+              ],
               "regulation_name": "PPWR (EU) 2025/40（2026-08-12 起适用）+ 各成员国包装 EPR 注册",
               "standard_numbers": [],
               "authority": "欧委会 / 成员国",
@@ -255,6 +524,9 @@
           "entries": [
             {
               "id": "EU-03",
+              "modules": [
+                "CRA"
+              ],
               "regulation_name": "GDPR (EU) 2016/679",
               "standard_numbers": [],
               "authority": "各国数据保护机构",
@@ -278,6 +550,9 @@
           "entries": [
             {
               "id": "EU-04",
+              "modules": [
+                "电子产品"
+              ],
               "regulation_name": "RED 3.1(a)（引用 LVD 安全目标）；EN IEC 62368-1",
               "standard_numbers": [
                 "EN IEC 62368-1"
@@ -311,6 +586,9 @@
           "entries": [
             {
               "id": "EU-05",
+              "modules": [
+                "电子产品"
+              ],
               "regulation_name": "RED 3.1(b)；EN 301 489-1/-17、EN 55032/55035",
               "standard_numbers": [
                 "EN 301 489-1/-17",
@@ -347,6 +625,9 @@
           "entries": [
             {
               "id": "EU-06",
+              "modules": [
+                "电子产品"
+              ],
               "regulation_name": "RED 3.2；EN 300 328、EN 301 893。5150–5350 仅室内，5250–5350/5470–5725 须 DFS/TPC",
               "standard_numbers": [
                 "EN 300 328",
@@ -391,6 +672,9 @@
           "entries": [
             {
               "id": "EU-07",
+              "modules": [
+                "电池"
+              ],
               "regulation_name": "电池法规 (EU) 2023/1542：标识、可拆卸（第 11 条，2027-02-18）、生产者 EPR",
               "standard_numbers": [],
               "authority": "欧委会 / 成员国",
@@ -436,6 +720,9 @@
           "entries": [
             {
               "id": "EU-08",
+              "modules": [
+                "计量"
+              ],
               "regulation_name": "NAWI 2014/31/EU；EN 45501 / OIML R76；WELMEC 2、7.2",
               "standard_numbers": [
                 "EN 45501",
@@ -472,6 +759,9 @@
           "entries": [
             {
               "id": "CA-01",
+              "modules": [
+                "CRA"
+              ],
               "regulation_name": "无针对联网产品的强制网络安全法",
               "standard_numbers": [],
               "authority": "—",
@@ -495,6 +785,9 @@
           "entries": [
             {
               "id": "CA-02",
+              "modules": [
+                "电子产品"
+              ],
               "regulation_name": "省级包装 EPR（安大略 O. Reg. 391/21、BC Recycling Regulation、魁北克）",
               "standard_numbers": [
                 "O. Reg. 391/21"
@@ -521,6 +814,9 @@
           "entries": [
             {
               "id": "CA-03",
+              "modules": [
+                "CRA"
+              ],
               "regulation_name": "PIPEDA",
               "standard_numbers": [],
               "authority": "加拿大隐私专员公署",
@@ -544,6 +840,9 @@
           "entries": [
             {
               "id": "CA-04",
+              "modules": [
+                "电子产品"
+              ],
               "regulation_name": "各省电气法规（CSA C22.1）要求认证标志；CSA C22.2 No. 62368-1",
               "standard_numbers": [
                 "CSA C22.1",
@@ -570,6 +869,10 @@
           "entries": [
             {
               "id": "CA-05",
+              "modules": [
+                "电子产品",
+                "FCC/ISED"
+              ],
               "regulation_name": "ICES-003",
               "standard_numbers": [
                 "ICES-003"
@@ -597,6 +900,9 @@
           "entries": [
             {
               "id": "CA-06",
+              "modules": [
+                "FCC/ISED"
+              ],
               "regulation_name": "RSS-Gen、RSS-247（2.4 与 5 GHz LE-LAN）、RSS-102；5150–5250 仅室内，5600–5650 受限，DFS",
               "standard_numbers": [
                 "RSS-Gen",
@@ -647,6 +953,9 @@
           "entries": [
             {
               "id": "CA-07",
+              "modules": [
+                "电池"
+              ],
               "regulation_name": "CCPSA 附表 3（2026-09-17 起纳入含纽扣电池的非玩具消费品）；危害公告引用 ANSI/UL 4200A-2023；产品、包装、说明书须有英法双语警示；另有省级电池 EPR",
               "standard_numbers": [
                 "ANSI/UL 4200A-2023"
@@ -751,6 +1060,9 @@
           "entries": [
             {
               "id": "CA-08",
+              "modules": [
+                "计量"
+              ],
               "regulation_name": "Weights and Measures Act；Specifications Relating to Non-automatic Weighing Devices；评价程序见《Laboratory manual for the evaluation of non-automatic weighing devices》（NAWDS_Lab Manual-eng_V1.2，Measurement Canada 发布 ✓）",
               "standard_numbers": [
                 "NAWDS_Lab Manual-eng_V1.2"
@@ -793,6 +1105,9 @@
           "entries": [
             {
               "id": "US-01",
+              "modules": [
+                "CRA"
+              ],
               "regulation_name": "联邦：无强制；U.S. Cyber Trust Mark 自愿，截至 2026-11 尚未开放申请。加州 SB-327 联网设备合理安全（唯一密码）",
               "standard_numbers": [],
               "authority": "FCC / 加州",
@@ -816,6 +1131,9 @@
           "entries": [
             {
               "id": "US-02",
+              "modules": [
+                "电子产品"
+              ],
               "regulation_name": "无联邦法；州包装 EPR（CA SB 54、OR、CO、ME、MN、MD、WA）",
               "standard_numbers": [],
               "authority": "各州",
@@ -845,6 +1163,9 @@
           "entries": [
             {
               "id": "US-03",
+              "modules": [
+                "CRA"
+              ],
               "regulation_name": "无联邦通用法；州隐私法（如 CCPA/CPRA）",
               "standard_numbers": [],
               "authority": "各州 AG",
@@ -868,6 +1189,9 @@
           "entries": [
             {
               "id": "US-04",
+              "modules": [
+                "电子产品"
+              ],
               "regulation_name": "OSHA 29 CFR 1910.303 要求工作场所设备经 NRTL 认证；UL 62368-1",
               "standard_numbers": [
                 "UL 62368-1"
@@ -893,6 +1217,10 @@
           "entries": [
             {
               "id": "US-05",
+              "modules": [
+                "电子产品",
+                "FCC/ISED"
+              ],
               "regulation_name": "47 CFR Part 15B（A/B 类数字设备）",
               "standard_numbers": [
                 "47 CFR Part 15B"
@@ -925,6 +1253,9 @@
           "entries": [
             {
               "id": "US-06",
+              "modules": [
+                "FCC/ISED"
+              ],
               "regulation_name": "Part 15.247（2.4 GHz）、15.407（U-NII）；U-NII-2A/2C 须 DFS；5850–5895 另有规定",
               "standard_numbers": [
                 "Part 15.247",
@@ -970,6 +1301,9 @@
           "entries": [
             {
               "id": "US-07",
+              "modules": [
+                "电池"
+              ],
               "regulation_name": "Reese's Law 16 CFR 1263（消费品，商用秤可能不适用）；加州高氯酸盐锂纽扣电池标识",
               "standard_numbers": [
                 "16 CFR 1263"
@@ -1002,6 +1336,9 @@
           "entries": [
             {
               "id": "US-08",
+              "modules": [
+                "计量"
+              ],
               "regulation_name": "NIST HB44 §2.20；NCWM Publication 14；HB130；参考 Measurement Canada《Laboratory manual for the evaluation of non-automatic weighing devices》（NAWDS Lab Manual，美国 NTEP 实验室亦使用）",
               "standard_numbers": [
                 "NIST HB44 §2.20",

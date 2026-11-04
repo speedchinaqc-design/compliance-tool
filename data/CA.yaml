@@ -16,6 +16,8 @@ dimensions:
     reason_if_not: 未勾选 Wi-Fi。本格按联网/无线产品编写；格子里若同时写了多项法规，规划书没有拆开，因此整格不进入适用清单。
   entries:
   - id: CA-01
+    modules:
+    - "CRA"
     regulation_name: 无针对联网产品的强制网络安全法
     standard_numbers: []
     authority: —
@@ -33,6 +35,8 @@ dimensions:
     always: true
   entries:
   - id: CA-02
+    modules:
+    - "电子产品"
     regulation_name: 省级包装 EPR（安大略 O. Reg. 391/21、BC Recycling Regulation、魁北克）
     standard_numbers:
     - O. Reg. 391/21
@@ -52,6 +56,8 @@ dimensions:
     conditional_on: processes_personal_data
   entries:
   - id: CA-03
+    modules:
+    - "CRA"
     regulation_name: PIPEDA
     standard_numbers: []
     authority: 加拿大隐私专员公署
@@ -69,6 +75,8 @@ dimensions:
     always: true
   entries:
   - id: CA-04
+    modules:
+    - "电子产品"
     regulation_name: 各省电气法规（CSA C22.1）要求认证标志；CSA C22.2 No. 62368-1
     standard_numbers:
     - CSA C22.1
@@ -88,6 +96,9 @@ dimensions:
     always: true
   entries:
   - id: CA-05
+    modules:
+    - "电子产品"
+    - "FCC/ISED"
     regulation_name: ICES-003
     standard_numbers:
     - ICES-003
@@ -108,6 +119,8 @@ dimensions:
     reason_if_not: 未勾选 Wi-Fi，无线要求不进入适用清单。
   entries:
   - id: CA-06
+    modules:
+    - "FCC/ISED"
     regulation_name: RSS-Gen、RSS-247（2.4 与 5 GHz LE-LAN）、RSS-102；5150–5250 仅室内，5600–5650 受限，DFS
     standard_numbers:
     - RSS-Gen
@@ -145,6 +158,8 @@ dimensions:
     reason_if_not: 未勾选纽扣电池，电池要求不进入适用清单。
   entries:
   - id: CA-07
+    modules:
+    - "电池"
     regulation_name: CCPSA 附表 3（2026-09-17 起纳入含纽扣电池的非玩具消费品）；危害公告引用 ANSI/UL 4200A-2023；产品、包装、说明书须有英法双语警示；另有省级电池 EPR
     standard_numbers:
     - ANSI/UL 4200A-2023
@@ -208,6 +223,8 @@ dimensions:
     reason_if_not: 未勾选贸易结算，法制计量不进入适用清单。
   entries:
   - id: CA-08
+    modules:
+    - "计量"
     regulation_name: Weights and Measures Act；Specifications Relating to Non-automatic Weighing Devices；评价程序见《Laboratory manual for the evaluation of non-automatic weighing devices》（NAWDS_Lab Manual-eng_V1.2，Measurement Canada 发布 ✓）
     standard_numbers:
     - NAWDS_Lab Manual-eng_V1.2

@@ -1,0 +1,108 @@
+import fs from "fs";
+import vm from "vm";
+
+function memoryStorage() {
+  const map = new Map();
+  return {
+    getItem(key) { return map.has(key) ? map.get(key) : null; },
+    setItem(key, value) { map.set(key, String(value)); },
+    removeItem(key) { map.delete(key); },
+    clear() { map.clear(); },
+  };
+}
+
+const sandbox = {
+  crypto,
+  TextEncoder,
+  Uint8Array,
+  localStorage: memoryStorage(),
+  console,
+  Date,
+  JSON,
+  Math,
+  Number,
+  String,
+  Array,
+  Object,
+  isNaN,
+};
+sandbox.globalThis = sandbox;
+sandbox.window = sandbox;
+vm.createContext(sandbox);
+for (const file of ["js/logic.js", "js/data.js", "js/store.js"]) {
+  vm.runInContext(fs.readFileSync(file, "utf8"), sandbox, { filename: file });
+}
+
+const store = sandbox.ComplianceStore;
+const logic = sandbox.ComplianceLogic;
+const data = sandbox.COMPLIANCE_DATA;
+
+function assert(cond, message) {
+  if (!cond) throw new Error(message);
+}
+
+assert(data.modules.map((item) => item.id).join(",") === "电子产品,电池,CRA,FCC/ISED,计量", "模块目录不对");
+const tagged = data.markets.flatMap((market) => market.dimensions.flatMap((dim) => dim.entries));
+assert(tagged.length === 24, "仍然应是 24 条");
+assert(tagged.every((entry) => entry.modules && entry.modules.length), "每条都要有模块");
+assert(tagged.find((entry) => entry.id === "US-06").modules.join(",") === "FCC/ISED", "美国无线应只标 FCC/ISED");
+assert(tagged.find((entry) => entry.id === "EU-06").modules.join(",") === "电子产品", "欧盟无线不标成 FCC/ISED");
+assert(tagged.find((entry) => entry.id === "CA-07").modules[0] === "电池", "加拿大电池模块");
+
+const uni = store.uni8Project();
+const batteryRows = logic.visibleRows(data, {
+  markets: { EU: true, CA: true, US: true },
+  modules: ["电池"],
+  attrs: uni.answers,
+  view: "checklist",
+  dimensionCode: "08",
+  query: "",
+});
+assert(batteryRows.length === 3, "只选电池模块时应剩 3 条，实际 " + batteryRows.length);
+assert(batteryRows.every((row) => row.entry.modules.indexOf("电池") !== -1), "滤出的条目应含电池模块");
+
+store.seedIfEmpty();
+assert(store.load().length === 1 && store.load()[0].name === "UNI-8", "空库应种入 UNI-8");
+const copy = store.duplicate("uni-8-sample");
+assert(copy.name === "UNI-8 副本" && copy.id !== "uni-8-sample", "复制应换 id");
+store.rename(copy.id, "UNI-8B");
+assert(store.get(copy.id).name === "UNI-8B", "重命名失败");
+store.remove(copy.id);
+assert(store.load().length === 1, "删除后应剩样板");
+
+const yaml = fs.readFileSync("docs/ai-judgment.sample.json", "utf8").replace(
+  '"requirement": "CA-07"',
+  '"requirement": "CA-07"'
+);
+const fromJson = store.parseJudgmentText(fs.readFileSync("docs/ai-judgment.sample.json", "utf8"));
+const merged = store.mergeJudgments(store.get("uni-8-sample"), fromJson);
+assert(merged.merged === 1 && merged.skipped === 0, "JSON 判断应并入 1 条");
+assert(merged.project.aiJudgments[0].status === "待核实", "状态应保留待核实");
+assert(!JSON.stringify(merged.project.aiJudgments).includes("correct-horse"), "判断文件不应夹带密码");
+
+const yamlText = `
+note: 格式示例
+judgments:
+  - requirement: EU-07
+    market: EU
+    module: 电池
+    layer1:
+      regulation: 待确认
+      official_link: https://single-market-economy.ec.europa.eu/single-market/goods/european-standards/harmonised-standards/eu-battery-regulation_en
+    layer2:
+      standard: 待确认
+      dropbox_path: /合规知识库/02_产品/UNI-8/EU/07BATT/
+      link: ""
+    conclusion: 待确认
+    source: 测试
+    status: 待确认
+`;
+const fromYaml = store.parseJudgmentText(yamlText);
+assert(fromYaml.judgments[0].layer1.regulation === "待确认", "YAML 第一层法规");
+assert(fromYaml.judgments[0].layer2.dropbox_path.indexOf("/合规知识库/") === 0, "YAML Dropbox 路径");
+const again = store.mergeJudgments(merged.project, fromYaml);
+assert(again.project.aiJudgments.length === 2, "不同 requirement 应追加");
+const bad = store.mergeJudgments(again.project, { judgments: [{ requirement: "EU-01", status: "随便写" }] });
+assert(bad.skipped === 1, "非法状态应跳过");
+
+console.log("project tests passed");
