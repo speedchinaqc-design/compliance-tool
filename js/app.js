@@ -150,7 +150,7 @@
       store.replace(project);
       openWizard(project.id);
     };
-    window.ComplianceWorkspace.render(app, project, tab || "checklist", function (next) {
+    window.ComplianceWorkspace.render(app, project, tab || "archive", function (next) {
       store.replace(next);
     }, showList, window.__workspaceWizard);
   }

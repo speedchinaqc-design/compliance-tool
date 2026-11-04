@@ -167,4 +167,40 @@ assert(store.waiverRecords(waived)[0].complete === true && store.waiverRecords(w
 const packWithDecision = store.auditPack(waived, "EU", false);
 assert(packWithDecision.testDecisions.length === 1, "审核包应带上测试决定");
 assert(packWithDecision.technicalIndex.some((line) => line.indexOf("王敏") !== -1), "技术文件目录应写决定人");
+
+const sized = store.blankArchive();
+sized.basic.variantRows = [{
+  model: "UNI-8B",
+  screen: "7 寸双屏",
+  status: "研发",
+  statusNote: "",
+  launchDates: { EU: "", CA: "", US: "" },
+  photos: ["", "", ""],
+  nameplatePhotos: ["", "", ""],
+  labelInfo: "",
+}];
+assert(store.migrateVariants(sized) === true, "旧屏幕尺寸应迁进第一项");
+const sizedRow = sized.basic.variantRows[0];
+assert(sizedRow.screens[0].type === "操作屏" && sizedRow.screens[0].size === "7 寸双屏", "旧文字应原样留在第一项");
+assert(sizedRow.screens[1].type === "客显屏" && sizedRow.screens[1].size === "", "默认应有客显屏");
+assert(store.screenSummary(sizedRow.screens) === "操作屏 7 寸双屏");
+sizedRow.screens[0].size = "15.6 寸";
+sizedRow.screens[1].size = "7 寸";
+sizedRow.screens.push({ type: "副屏", size: "10 寸" });
+store.touchVariants(sized);
+assert(sizedRow.screen === "操作屏 15.6 寸 + 客显屏 7 寸 + 副屏 10 寸", "汇总应带上自定义屏幕");
+const sizedSnap = JSON.stringify(sized.basic.variantRows);
+assert(store.migrateVariants(sized) === false, "屏幕列表再次迁移不能改写");
+assert(JSON.stringify(sized.basic.variantRows) === sizedSnap);
+
+const cell = store.uni8Project();
+assert(store.homeCellFlags(cell, ["CA-07"], [], []).indexOf("缺证据") !== -1, "没有证据应算缺证据");
+cell.tests["CA-07"] = { status: store.WAIVER_STATUS, decider: "王敏", decidedOn: "2026-11-01", note: "" };
+const waivedFlags = store.homeCellFlags(cell, ["CA-07"], [], []);
+assert(waivedFlags.indexOf("领导层决定不测试") !== -1 && waivedFlags.indexOf("缺证据") === -1, "决定不测试后不再算缺证据");
+assert(waivedFlags.indexOf("已齐全") !== -1);
+cell.reviews = { "CA-07": { status: "需要复核" } };
+assert(store.homeCellFlags(cell, ["CA-07"], [], []).indexOf("需要复核") !== -1);
+const soon = new Date(Date.now() + 10 * 86400000).toISOString().slice(0, 10);
+assert(store.homeCellFlags(cell, ["CA-07"], [], [{ requirementIds: ["CA-07"], expiry: soon }]).indexOf("即将过期") !== -1);
 console.log("project tests passed");

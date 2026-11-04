@@ -5,12 +5,12 @@
     return root.ComplianceDom.el.apply(null, arguments);
   };
   var TABS = [
+    ["archive", "产品档案"],
     ["checklist", "合规清单"],
     ["modules", "模块"],
     ["documents", "文件模板"],
     ["labels", "标签模板"],
     ["tests", "产品测试"],
-    ["archive", "产品档案"],
     ["ai", "AI判断结果导入"],
   ];
 

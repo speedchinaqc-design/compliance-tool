@@ -251,11 +251,38 @@
     return [0, 1, 2].map(function (index) { return String(list[index] || ""); });
   }
 
+  function screenSummary(screens) {
+    return (screens || []).map(function (item) {
+      var type = String((item && item.type) || "").trim();
+      var size = String((item && item.size) || "").trim();
+      if (!size) return "";
+      return type ? type + " " + size : size;
+    }).filter(Boolean).join(" + ");
+  }
+
+  function normalizeScreens(source) {
+    if (source && Array.isArray(source.screens)) {
+      return source.screens.map(function (item) {
+        var entry = item && typeof item === "object" ? item : {};
+        return { type: String(entry.type || ""), size: String(entry.size || "") };
+      });
+    }
+    return [
+      { type: "操作屏", size: String((source && source.screen) || "") },
+      { type: "客显屏", size: "" },
+    ];
+  }
+
   function emptyVariantRow(basic) {
     basic = basic || {};
+    var screens = [
+      { type: "操作屏", size: "" },
+      { type: "客显屏", size: "" },
+    ];
     return {
       model: "",
-      screen: "",
+      screen: screenSummary(screens),
+      screens: screens,
       photos: ["", "", ""],
       status: basic.status || "研发",
       statusNote: basic.statusNote || "",
@@ -266,18 +293,20 @@
   }
 
   function normalizeVariantRow(row, basic) {
-    var base = emptyVariantRow(basic);
     var source = row && typeof row === "object" ? row : {};
-    base.model = String(source.model || "").trim();
-    base.screen = String(source.screen || "");
-    base.photos = threePaths(source.photos);
-    base.status = String(source.status || base.status);
-    base.statusNote = source.statusNote != null ? String(source.statusNote) : base.statusNote;
-    var dates = source.launchDates || base.launchDates;
-    base.launchDates = emptyLaunchDates(dates);
-    base.nameplatePhotos = threePaths(source.nameplatePhotos);
-    base.labelInfo = String(source.labelInfo || "");
-    return base;
+    var screens = normalizeScreens(source);
+    basic = basic || {};
+    return {
+      model: String(source.model || "").trim(),
+      screen: screenSummary(screens),
+      screens: screens,
+      photos: threePaths(source.photos),
+      status: String(source.status || basic.status || "研发"),
+      statusNote: source.statusNote != null ? String(source.statusNote) : String(basic.statusNote || ""),
+      launchDates: emptyLaunchDates(source.launchDates || basic.launchDates),
+      nameplatePhotos: threePaths(source.nameplatePhotos),
+      labelInfo: String(source.labelInfo || ""),
+    };
   }
 
   function legacyVariantNames(value) {
@@ -380,6 +409,9 @@
 
   function touchVariants(archive) {
     if (!archive || !archive.basic) return;
+    (archive.basic.variantRows || []).forEach(function (row) {
+      if (Array.isArray(row.screens)) row.screen = screenSummary(row.screens);
+    });
     syncVariantNames(archive.basic);
     archive.basic.statusAggregate = aggregateStatus(archive.basic);
   }
@@ -416,6 +448,33 @@
 
   function countsAsMissing(project, item) {
     return !!(item && item.status === "缺失" && !isTestWaived(project, item.requirement));
+  }
+
+  function homeCellFlags(project, ids, comparisons, evidence) {
+    var list = ids || [];
+    var evidenced = {};
+    (evidence || []).forEach(function (item) {
+      (item.requirementIds || []).forEach(function (id) { evidenced[id] = true; });
+    });
+    var missingCompare = (comparisons || []).some(function (item) { return countsAsMissing(project, item); });
+    var gap = (comparisons || []).some(function (item) { return item.status === "差距"; });
+    var uncovered = list.filter(function (id) {
+      return !evidenced[id] && !isTestWaived(project, id);
+    });
+    var lack = missingCompare || uncovered.length > 0;
+    var flags = [];
+    if (list.length && !lack && !gap) flags.push("已齐全");
+    if (lack) flags.push("缺证据");
+    if ((evidence || []).some(function (item) {
+      var days = daysUntil(item.expiry);
+      return days != null && days <= 90;
+    })) flags.push("即将过期");
+    if (list.some(function (id) {
+      var review = project && project.reviews && project.reviews[id];
+      return review && review.status === "需要复核";
+    })) flags.push("需要复核");
+    if (list.some(function (id) { return isTestWaived(project, id); })) flags.push("领导层决定不测试");
+    return flags;
   }
 
   function blankArchive() {
@@ -749,7 +808,8 @@
       variants: filledVariants(basic).map(function (row) {
         return {
           model: row.model,
-          screen: row.screen,
+          screen: screenSummary(row.screens) || row.screen,
+          screens: row.screens || [],
           status: row.status,
           statusNote: row.statusNote,
           launchDates: row.launchDates,
@@ -862,6 +922,8 @@
     isTestWaived: isTestWaived,
     waiverRecords: waiverRecords,
     countsAsMissing: countsAsMissing,
+    screenSummary: screenSummary,
+    homeCellFlags: homeCellFlags,
     WAIVER_STATUS: WAIVER_STATUS,
     blankArchive: blankArchive,
     sampleArchive: sampleArchive,

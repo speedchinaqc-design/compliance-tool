@@ -149,6 +149,7 @@
           market: market,
           module: moduleName,
           status: status,
+          flags: root.ComplianceStore.homeCellFlags(project, related.map(function (row) { return row.entry.id; }), comparisons, evidence),
           evidenceNos: evidence.map(function (item) { return item.reportNo || "待确认"; }).join("；") || "无",
           expiry: expiries[0] || "",
         });
@@ -166,27 +167,134 @@
     return id + " " + (zh || reg);
   }
 
+  var HOME_MARKETS = ["EU", "CA", "US"];
+  var HOME_STATUSES = ["已齐全", "缺证据", "即将过期", "需要复核", "领导层决定不测试"];
+
+  function filterStorageKey(project) {
+    return "compliance-archive-filter-v1:" + (project.id || "");
+  }
+
+  function readHomeFilter(project, modules) {
+    var fallback = { markets: HOME_MARKETS.slice(), modules: modules.slice(), statuses: HOME_STATUSES.slice() };
+    try {
+      var raw = root.localStorage && root.localStorage.getItem(filterStorageKey(project));
+      if (!raw) return fallback;
+      var saved = JSON.parse(raw);
+      function keep(list, allowed) {
+        if (!Array.isArray(list)) return allowed.slice();
+        return list.filter(function (item) { return allowed.indexOf(item) !== -1; });
+      }
+      return {
+        markets: saved.allMarkets ? HOME_MARKETS.slice() : keep(saved.markets, HOME_MARKETS),
+        modules: saved.allModules ? modules.slice() : keep(saved.modules, modules),
+        statuses: saved.allStatuses ? HOME_STATUSES.slice() : keep(saved.statuses, HOME_STATUSES),
+      };
+    } catch (err) {
+      return fallback;
+    }
+  }
+
+  function writeHomeFilter(project, filter, modules) {
+    try {
+      if (!root.localStorage) return;
+      root.localStorage.setItem(filterStorageKey(project), JSON.stringify({
+        markets: filter.markets,
+        modules: filter.modules,
+        statuses: filter.statuses,
+        allMarkets: filter.markets.length === HOME_MARKETS.length,
+        allModules: filter.modules.length === modules.length,
+        allStatuses: filter.statuses.length === HOME_STATUSES.length,
+      }));
+    } catch (err) {}
+  }
+
+  function homeFilterMode(selected, all) {
+    if (!selected.length) return "none";
+    if (selected.length >= all.length) return "all";
+    return "some";
+  }
+
+  function homeRowVisible(record, filter, modules) {
+    var marketMode = homeFilterMode(filter.markets, HOME_MARKETS);
+    if (marketMode === "none") return false;
+    if (marketMode === "some" && filter.markets.indexOf(record.market) === -1) return false;
+    var moduleMode = homeFilterMode(filter.modules, modules);
+    if (moduleMode === "none") return false;
+    if (moduleMode === "some" && filter.modules.indexOf(record.module) === -1) return false;
+    var statusMode = homeFilterMode(filter.statuses, HOME_STATUSES);
+    if (statusMode === "none") return false;
+    if (statusMode === "some" && !filter.statuses.some(function (flag) { return (record.flags || []).indexOf(flag) !== -1; })) return false;
+    return true;
+  }
+
   function renderHome(project, rows, onChange) {
     var records = summaryRows(project, rows);
+    var modules = [];
+    records.forEach(function (record) {
+      if (modules.indexOf(record.module) === -1) modules.push(record.module);
+    });
+    var filter = readHomeFilter(project, modules);
     var basic = project.archive.basic;
     var aggregate = root.ComplianceStore.aggregateStatus(basic);
     var table = el("table", { class: "bands", id: "archive-home" });
-    table.append(el("caption", {}, ["市场 × 模块"]));
     var head = el("tr");
     ["市场", "模块", "对比状态", "证据编号", "最近到期"].forEach(function (label) {
       head.append(el("th", {}, [label]));
     });
     var body = el("tbody");
-    records.forEach(function (record) {
-      body.append(el("tr", {}, [
-        el("td", {}, [record.market]),
-        el("td", {}, [record.module]),
-        el("td", {}, [MARK[record.status] || record.status]),
-        el("td", {}, [record.evidenceNos]),
-        el("td", {}, [record.expiry || "未填"]),
-      ]));
-    });
     table.append(el("thead", {}, [head]), body);
+    var count = el("p", { id: "archive-filter-count", class: "help" });
+    function shownRecords() {
+      return records.filter(function (record) { return homeRowVisible(record, filter, modules); });
+    }
+    function paintRows() {
+      var shown = shownRecords();
+      body.replaceChildren();
+      if (!shown.length) body.append(el("tr", {}, [el("td", { colspan: "5" }, ["没有符合筛选的项。"])]));
+      shown.forEach(function (record) {
+        body.append(el("tr", {}, [
+          el("td", {}, [record.market]),
+          el("td", {}, [record.module]),
+          el("td", {}, [MARK[record.status] || record.status]),
+          el("td", {}, [record.evidenceNos]),
+          el("td", {}, [record.expiry || "未填"]),
+        ]));
+      });
+      count.textContent = "显示 " + shown.length + " / 共 " + records.length + " 项";
+      writeHomeFilter(project, filter, modules);
+    }
+    function optionGroup(title, name, options, selected) {
+      var group = el("fieldset", {}, [el("legend", {}, [title])]);
+      options.forEach(function (option) {
+        var input = el("input", { type: "checkbox", name: name, value: option });
+        if (selected.indexOf(option) !== -1) input.checked = true;
+        input.addEventListener("change", function () {
+          var picked = [];
+          group.querySelectorAll("input[type=checkbox]").forEach(function (box) {
+            if (box.checked) picked.push(box.value);
+          });
+          filter[name] = picked;
+          paintRows();
+        });
+        group.append(el("label", { class: "choice" }, [input, " " + option]));
+      });
+      return group;
+    }
+    var filterBar = el("div", { id: "archive-filter", class: "archive-filter no-print" }, [
+      optionGroup("市场", "markets", HOME_MARKETS, filter.markets),
+      optionGroup("模块", "modules", modules, filter.modules),
+      optionGroup("状态", "statuses", HOME_STATUSES, filter.statuses),
+    ]);
+    var clear = el("button", { type: "button", class: "ghost", id: "archive-filter-clear" }, ["清空筛选"]);
+    clear.addEventListener("click", function () {
+      filter.markets = HOME_MARKETS.slice();
+      filter.modules = modules.slice();
+      filter.statuses = HOME_STATUSES.slice();
+      filterBar.querySelectorAll("input[type=checkbox]").forEach(function (input) { input.checked = true; });
+      paintRows();
+    });
+    filterBar.append(clear);
+    paintRows();
     var market = el("select", { id: "audit-market" });
     ["", "EU", "CA", "US"].forEach(function (code) {
       market.append(el("option", { value: code }, [code || "全部市场"]));
@@ -195,7 +303,11 @@
     var excel = el("button", { type: "button", id: "audit-excel" }, ["导出审核包 Excel"]);
     excel.addEventListener("click", function () { exportAudit(project, market.value, sensitive.checked); });
     var summaryExcel = el("button", { type: "button", id: "summary-excel" }, ["导出汇总 Excel"]);
-    summaryExcel.addEventListener("click", function () { exportSummary(project, records); });
+    summaryExcel.addEventListener("click", function () {
+      var shown = shownRecords();
+      var onlyFiltered = root.confirm("导出当前筛选的 " + shown.length + " 项？\n确定：只导出筛选结果\n取消：导出全部 " + records.length + " 项");
+      exportSummary(project, onlyFiltered ? shown : records);
+    });
     var print = el("button", { type: "button", class: "ghost", id: "summary-print" }, ["打印 / 存为 PDF"]);
     print.addEventListener("click", function () {
       document.body.classList.add("print-archive");
@@ -208,6 +320,10 @@
     return el("div", {}, [
       el("p", { id: "product-status", class: "note" }, ["产品状态：" + aggregate + "。由各变体是否「已上市」汇总，主型号本身不是变体。"]),
       waivers.length ? el("p", { class: "help" }, ["领导层决定先不做测试（不计入缺失证据）：" + waivers.join("；")]) : null,
+      el("h3", {}, ["市场 × 模块"]),
+      filterBar,
+      el("p", { class: "help" }, ["状态可多选：一行只要命中所选中的一项就会留下。即将过期包括已到期和 90 天内。全选等于不限。"]),
+      count,
       table,
       el("div", { class: "wizard-bar no-print" }, [
         market,
@@ -234,6 +350,71 @@
       if (img.parentNode) img.replaceWith(note);
     });
     return img;
+  }
+
+  function screenEditors(row, onCommit) {
+    if (!Array.isArray(row.screens)) {
+      row.screens = [
+        { type: "操作屏", size: row.screen || "" },
+        { type: "客显屏", size: "" },
+      ];
+    }
+    var box = el("div", { class: "screen-stack" });
+    var summary = el("p", { class: "help screen-summary" });
+    function paintSummary() {
+      var text = root.ComplianceStore.screenSummary(row.screens);
+      row.screen = text;
+      summary.textContent = text || "尚未填写屏幕尺寸。";
+    }
+    (row.screens || []).forEach(function (item, index) {
+      var known = item.type === "操作屏" || item.type === "客显屏";
+      var select = el("select", { "aria-label": "屏幕类型" });
+      [["操作屏", "操作屏"], ["客显屏", "客显屏"], ["__custom", "其他"]].forEach(function (pair) {
+        var option = el("option", { value: pair[0] }, [pair[1]]);
+        if ((known && pair[0] === item.type) || (!known && pair[0] === "__custom")) option.selected = true;
+        select.append(option);
+      });
+      var custom = el("input", { type: "text", value: known ? "" : (item.type || ""), placeholder: "例如 副屏" });
+      if (known) custom.hidden = true;
+      select.addEventListener("change", function () {
+        if (select.value === "__custom") {
+          custom.hidden = false;
+          item.type = custom.value.trim();
+          custom.focus();
+        } else {
+          custom.hidden = true;
+          item.type = select.value;
+        }
+        paintSummary();
+        onCommit(false);
+      });
+      custom.addEventListener("change", function () {
+        item.type = custom.value.trim();
+        paintSummary();
+        onCommit(false);
+      });
+      var size = el("input", { type: "text", value: item.size || "", placeholder: "例如 7 寸" });
+      size.addEventListener("change", function () {
+        item.size = size.value;
+        paintSummary();
+        onCommit(false);
+      });
+      var del = el("button", { type: "button", class: "ghost" }, ["删除"]);
+      del.addEventListener("click", function () {
+        row.screens.splice(index, 1);
+        paintSummary();
+        onCommit(true);
+      });
+      box.append(el("div", { class: "screen-line" }, [select, custom, size, del]));
+    });
+    var add = el("button", { type: "button", class: "ghost" }, ["增加屏幕尺寸"]);
+    add.addEventListener("click", function () {
+      row.screens.push({ type: "操作屏", size: "" });
+      onCommit(true);
+    });
+    paintSummary();
+    box.append(summary, add);
+    return box;
   }
 
   function photoEditors(paths, onCommit) {
@@ -264,7 +445,7 @@
     var table = el("table", { class: "bands variant-table", id: "variant-table" });
     table.append(el("caption", {}, ["型号变体"]));
     var head = el("tr");
-    ["变体型号", "屏幕尺寸", "照片", ""].forEach(function (label) { head.append(el("th", {}, [label])); });
+    ["变体型号", "屏幕尺寸（操作屏尺寸+客显屏尺寸）", "照片", ""].forEach(function (label) { head.append(el("th", {}, [label])); });
     var body = el("tbody");
     (basic.variantRows || []).forEach(function (row, index) {
       body.append(el("tr", {}, [
@@ -272,10 +453,7 @@
           row.model = value.trim();
           commitVariants(project, onChange, true);
         })]),
-        el("td", {}, [textField("屏幕尺寸", row.screen, function (value) {
-          row.screen = value;
-          commitVariants(project, onChange, false);
-        })]),
+        el("td", {}, [screenEditors(row, function (rerender) { commitVariants(project, onChange, !!rerender); })]),
         el("td", {}, [photoEditors(row.photos, function () { commitVariants(project, onChange, true); })]),
         el("td", {}, [removeButton(function () {
           basic.variantRows.splice(index, 1);
@@ -774,9 +952,9 @@
     }));
     var variantRows = [
       ["产品状态", root.ComplianceStore.aggregateStatus(basic)],
-      ["变体型号", "屏幕尺寸", "状态", "状态说明", "EU 上市日期", "CA 上市日期", "US 上市日期", "标签信息"],
+      ["变体型号", "屏幕尺寸（操作屏尺寸+客显屏尺寸）", "状态", "状态说明", "EU 上市日期", "CA 上市日期", "US 上市日期", "标签信息"],
     ].concat(root.ComplianceStore.filledVariants(basic).map(function (row) {
-      return [row.model, row.screen, row.status, row.statusNote, row.launchDates.EU, row.launchDates.CA, row.launchDates.US, row.labelInfo];
+      return [row.model, root.ComplianceStore.screenSummary(row.screens) || row.screen, row.status, row.statusNote, row.launchDates.EU, row.launchDates.CA, row.launchDates.US, row.labelInfo];
     }));
     var decisions = [["条目", "决定人", "决定日期", "备注", "决定人和日期已填"]].concat(root.ComplianceStore.waiverRecords(project).map(function (item) {
       return [item.id, item.decider, item.decidedOn, item.note, item.complete ? "是" : "否"];
