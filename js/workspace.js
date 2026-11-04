@@ -10,6 +10,7 @@
     ["documents", "文件模板"],
     ["labels", "标签模板"],
     ["tests", "产品测试"],
+    ["archive", "产品档案"],
     ["ai", "AI判断结果导入"],
   ];
 
@@ -75,6 +76,10 @@
     if (tab === "documents") body.append(renderTemplates(project, "document"));
     if (tab === "labels") body.append(renderTemplates(project, "label"));
     if (tab === "tests") body.append(renderTests(project, onChange));
+    if (tab === "archive") {
+      if (root.ComplianceStore.ensureArchive(project)) onChange(project);
+      root.ComplianceArchive.render(body, project, rowsFor(project), onChange);
+    }
     if (tab === "ai") body.append(renderAi(project, onChange));
     page.append(body);
     host.append(page);
@@ -101,6 +106,7 @@
       el("p", {}, ["强制性（规划书原文）：" + entry.obligation]),
       el("p", {}, ["认证路径：" + entry.certification_route]),
       el("p", {}, ["标准号：" + root.ComplianceLogic.displayStandards(entry)]),
+      el("p", {}, ["需要的证据：" + ((entry.evidence_types || []).join("、") || "未声明")]),
       el("p", { class: "source" }, ["来源 ", el("a", { href: entry.source_url, rel: "noopener noreferrer" }, [entry.source_url])]),
       el("p", { class: "path" }, [row.folder]),
     ]);
@@ -239,7 +245,7 @@
     });
     var wrap = el("div", { id: "ai-import" }, [
       el("p", {}, ["请把说明书发给 Dan Bot 做判断，再把结果文件导入这里。本工具里面没有 AI，也不会自动下结论。"]),
-      el("p", { class: "help" }, ["格式见仓库 docs/ai-judgment-format.md。每条包含：requirement、market、module、第一层法规和官方链接、第二层标准和 Dropbox 路径或链接、conclusion、source、status（已核实 / 待核实 / N/A / 待确认）。"]),
+      el("p", { class: "help" }, ["格式见仓库 docs/ai-judgment-format.md。判断结果和对比清单可以放在同一个文件里。对比状态用符合、差距或缺失。"]),
       input,
       message,
     ]);

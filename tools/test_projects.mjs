@@ -105,4 +105,25 @@ assert(again.project.aiJudgments.length === 2, "不同 requirement 应追加");
 const bad = store.mergeJudgments(again.project, { judgments: [{ requirement: "EU-01", status: "随便写" }] });
 assert(bad.skipped === 1, "非法状态应跳过");
 
+const sample = store.uni8Project();
+assert(sample.archive.evidence[0].reportNo.indexOf("非真实编号") !== -1, "示例证据不能写成真实编号");
+assert(sample.archive.correspondence[0].ref === "26-005366-600", "应保留复函编号");
+assert(sample.archive.correspondence[0].requirementIds[0] === "CA-07", "往来应连到 CA-07");
+const pack = store.auditPack(sample, "CA", false);
+assert(!pack.sensitive, "审核包默认不含敏感信息");
+assert(pack.schedule[0].fee == null, "默认不导出费用");
+assert(pack.evidence.length === 1, "加拿大审核包应有那条示例证据");
+const withFee = store.auditPack(sample, "CA", true);
+assert(withFee.sensitive && withFee.schedule[0].fee, "勾选后才带费用");
+const compared = store.mergeComparisons(sample, {
+  comparisons: [{ requirement: "EU-08", market: "EU", module: "计量", status: "✅符合", reason: "待确认", source: "示例", dropbox_path: "/合规知识库/02_产品/UNI-8/EU/08METRO/", page: "1" }],
+});
+assert(compared.merged === 1, "对比结果应并入");
+assert(sample.archive.comparisons.some((item) => item.requirement === "EU-08" && item.status === "符合"), "✅符合 应规范成 符合");
+const entry = data.markets.flatMap((market) => market.dimensions.flatMap((dim) => dim.entries)).find((item) => item.id === "CA-07");
+assert(store.versionGap(sample.archive.evidence[0], entry) === "版本一致", "2023 应与清单里的 ANSI/UL 4200A-2023 一致");
+assert(store.modelGaps(sample).length === 1, "未覆盖的示例型号应被标出");
+const exported = JSON.stringify(store.exportPayload([sample]));
+assert(exported.indexOf("26-005366-600") !== -1 && exported.indexOf("非真实编号") !== -1, "导出 JSON 应含档案");
+
 console.log("project tests passed");

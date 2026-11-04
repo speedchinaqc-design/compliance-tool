@@ -180,6 +180,33 @@ EXPECTED_MODULES = {
     "CA-08": ["计量"],
 }
 
+EXPECTED_EVIDENCE = {
+    "EU-01": ["DoC", "技术文件"],
+    "EU-02": ["注册文件", "标签照片"],
+    "EU-03": ["合规文档"],
+    "EU-04": ["DoC", "技术文件"],
+    "EU-05": ["DoC", "测试报告"],
+    "EU-06": ["DoC", "测试报告"],
+    "EU-07": ["注册文件", "标签照片"],
+    "EU-08": ["证书", "标签照片"],
+    "US-01": ["合规文档"],
+    "US-02": ["注册文件"],
+    "US-03": ["合规文档"],
+    "US-04": ["证书", "测试报告"],
+    "US-05": ["DoC", "测试报告"],
+    "US-06": ["证书", "测试报告"],
+    "US-07": ["测试报告", "标签照片"],
+    "US-08": ["证书"],
+    "CA-01": ["无"],
+    "CA-02": ["注册文件"],
+    "CA-03": ["合规文档"],
+    "CA-04": ["证书", "标签照片"],
+    "CA-05": ["DoC", "标签照片"],
+    "CA-06": ["证书", "测试报告"],
+    "CA-07": ["测试报告", "标签照片", "说明书"],
+    "CA-08": ["证书"],
+}
+
 
 def known_urls(markets: dict[str, dict]) -> set[str]:
     found = set()
@@ -205,6 +232,14 @@ def check_modules(markets: dict[str, dict], catalog: dict, questions: dict, erro
                 seen[entry["id"]] = entry.get("modules")
     if seen != EXPECTED_MODULES:
         errors.append("条目上的模块标记与第一期归类表不一致。")
+    evidence_seen = {
+        entry["id"]: entry.get("evidence_types")
+        for document in markets.values()
+        for dimension in document["dimensions"]
+        for entry in dimension["entries"]
+    }
+    if evidence_seen != EXPECTED_EVIDENCE:
+        errors.append("条目上的证据类型与认证路径归类不一致。")
     urls = known_urls(markets)
     qids = set()
     for question in questions["questions"]:

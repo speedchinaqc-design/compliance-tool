@@ -472,6 +472,10 @@
               "modules": [
                 "CRA"
               ],
+              "evidence_types": [
+                "DoC",
+                "技术文件"
+              ],
               "regulation_name": "RED 授权法规 (EU) 2022/30（2025-08-01 起，EN 18031-1）；CRA (EU) 2024/2847（报告义务 2026-09-11，全面 2027-12-11）",
               "standard_numbers": [
                 "EN 18031-1"
@@ -500,6 +504,10 @@
               "modules": [
                 "电子产品"
               ],
+              "evidence_types": [
+                "注册文件",
+                "标签照片"
+              ],
               "regulation_name": "PPWR (EU) 2025/40（2026-08-12 起适用）+ 各成员国包装 EPR 注册",
               "standard_numbers": [],
               "authority": "欧委会 / 成员国",
@@ -527,6 +535,9 @@
               "modules": [
                 "CRA"
               ],
+              "evidence_types": [
+                "合规文档"
+              ],
               "regulation_name": "GDPR (EU) 2016/679",
               "standard_numbers": [],
               "authority": "各国数据保护机构",
@@ -552,6 +563,10 @@
               "id": "EU-04",
               "modules": [
                 "电子产品"
+              ],
+              "evidence_types": [
+                "DoC",
+                "技术文件"
               ],
               "regulation_name": "RED 3.1(a)（引用 LVD 安全目标）；EN IEC 62368-1",
               "standard_numbers": [
@@ -588,6 +603,10 @@
               "id": "EU-05",
               "modules": [
                 "电子产品"
+              ],
+              "evidence_types": [
+                "DoC",
+                "测试报告"
               ],
               "regulation_name": "RED 3.1(b)；EN 301 489-1/-17、EN 55032/55035",
               "standard_numbers": [
@@ -627,6 +646,10 @@
               "id": "EU-06",
               "modules": [
                 "电子产品"
+              ],
+              "evidence_types": [
+                "DoC",
+                "测试报告"
               ],
               "regulation_name": "RED 3.2；EN 300 328、EN 301 893。5150–5350 仅室内，5250–5350/5470–5725 须 DFS/TPC",
               "standard_numbers": [
@@ -674,6 +697,10 @@
               "id": "EU-07",
               "modules": [
                 "电池"
+              ],
+              "evidence_types": [
+                "注册文件",
+                "标签照片"
               ],
               "regulation_name": "电池法规 (EU) 2023/1542：标识、可拆卸（第 11 条，2027-02-18）、生产者 EPR",
               "standard_numbers": [],
@@ -723,6 +750,10 @@
               "modules": [
                 "计量"
               ],
+              "evidence_types": [
+                "证书",
+                "标签照片"
+              ],
               "regulation_name": "NAWI 2014/31/EU；EN 45501 / OIML R76；WELMEC 2、7.2",
               "standard_numbers": [
                 "EN 45501",
@@ -762,6 +793,9 @@
               "modules": [
                 "CRA"
               ],
+              "evidence_types": [
+                "无"
+              ],
               "regulation_name": "无针对联网产品的强制网络安全法",
               "standard_numbers": [],
               "authority": "—",
@@ -787,6 +821,9 @@
               "id": "CA-02",
               "modules": [
                 "电子产品"
+              ],
+              "evidence_types": [
+                "注册文件"
               ],
               "regulation_name": "省级包装 EPR（安大略 O. Reg. 391/21、BC Recycling Regulation、魁北克）",
               "standard_numbers": [
@@ -817,6 +854,9 @@
               "modules": [
                 "CRA"
               ],
+              "evidence_types": [
+                "合规文档"
+              ],
               "regulation_name": "PIPEDA",
               "standard_numbers": [],
               "authority": "加拿大隐私专员公署",
@@ -842,6 +882,10 @@
               "id": "CA-04",
               "modules": [
                 "电子产品"
+              ],
+              "evidence_types": [
+                "证书",
+                "标签照片"
               ],
               "regulation_name": "各省电气法规（CSA C22.1）要求认证标志；CSA C22.2 No. 62368-1",
               "standard_numbers": [
@@ -873,6 +917,10 @@
                 "电子产品",
                 "FCC/ISED"
               ],
+              "evidence_types": [
+                "DoC",
+                "标签照片"
+              ],
               "regulation_name": "ICES-003",
               "standard_numbers": [
                 "ICES-003"
@@ -902,6 +950,10 @@
               "id": "CA-06",
               "modules": [
                 "FCC/ISED"
+              ],
+              "evidence_types": [
+                "证书",
+                "测试报告"
               ],
               "regulation_name": "RSS-Gen、RSS-247（2.4 与 5 GHz LE-LAN）、RSS-102；5150–5250 仅室内，5600–5650 受限，DFS",
               "standard_numbers": [
@@ -955,6 +1007,11 @@
               "id": "CA-07",
               "modules": [
                 "电池"
+              ],
+              "evidence_types": [
+                "测试报告",
+                "标签照片",
+                "说明书"
               ],
               "regulation_name": "CCPSA 附表 3（2026-09-17 起纳入含纽扣电池的非玩具消费品）；危害公告引用 ANSI/UL 4200A-2023；产品、包装、说明书须有英法双语警示；另有省级电池 EPR",
               "standard_numbers": [
@@ -1063,6 +1120,9 @@
               "modules": [
                 "计量"
               ],
+              "evidence_types": [
+                "证书"
+              ],
               "regulation_name": "Weights and Measures Act；Specifications Relating to Non-automatic Weighing Devices；评价程序见《Laboratory manual for the evaluation of non-automatic weighing devices》（NAWDS_Lab Manual-eng_V1.2，Measurement Canada 发布 ✓）",
               "standard_numbers": [
                 "NAWDS_Lab Manual-eng_V1.2"
@@ -1108,6 +1168,9 @@
               "modules": [
                 "CRA"
               ],
+              "evidence_types": [
+                "合规文档"
+              ],
               "regulation_name": "联邦：无强制；U.S. Cyber Trust Mark 自愿，截至 2026-11 尚未开放申请。加州 SB-327 联网设备合理安全（唯一密码）",
               "standard_numbers": [],
               "authority": "FCC / 加州",
@@ -1133,6 +1196,9 @@
               "id": "US-02",
               "modules": [
                 "电子产品"
+              ],
+              "evidence_types": [
+                "注册文件"
               ],
               "regulation_name": "无联邦法；州包装 EPR（CA SB 54、OR、CO、ME、MN、MD、WA）",
               "standard_numbers": [],
@@ -1166,6 +1232,9 @@
               "modules": [
                 "CRA"
               ],
+              "evidence_types": [
+                "合规文档"
+              ],
               "regulation_name": "无联邦通用法；州隐私法（如 CCPA/CPRA）",
               "standard_numbers": [],
               "authority": "各州 AG",
@@ -1191,6 +1260,10 @@
               "id": "US-04",
               "modules": [
                 "电子产品"
+              ],
+              "evidence_types": [
+                "证书",
+                "测试报告"
               ],
               "regulation_name": "OSHA 29 CFR 1910.303 要求工作场所设备经 NRTL 认证；UL 62368-1",
               "standard_numbers": [
@@ -1220,6 +1293,10 @@
               "modules": [
                 "电子产品",
                 "FCC/ISED"
+              ],
+              "evidence_types": [
+                "DoC",
+                "测试报告"
               ],
               "regulation_name": "47 CFR Part 15B（A/B 类数字设备）",
               "standard_numbers": [
@@ -1255,6 +1332,10 @@
               "id": "US-06",
               "modules": [
                 "FCC/ISED"
+              ],
+              "evidence_types": [
+                "证书",
+                "测试报告"
               ],
               "regulation_name": "Part 15.247（2.4 GHz）、15.407（U-NII）；U-NII-2A/2C 须 DFS；5850–5895 另有规定",
               "standard_numbers": [
@@ -1304,6 +1385,10 @@
               "modules": [
                 "电池"
               ],
+              "evidence_types": [
+                "测试报告",
+                "标签照片"
+              ],
               "regulation_name": "Reese's Law 16 CFR 1263（消费品，商用秤可能不适用）；加州高氯酸盐锂纽扣电池标识",
               "standard_numbers": [
                 "16 CFR 1263"
@@ -1338,6 +1423,9 @@
               "id": "US-08",
               "modules": [
                 "计量"
+              ],
+              "evidence_types": [
+                "证书"
               ],
               "regulation_name": "NIST HB44 §2.20；NCWM Publication 14；HB130；参考 Measurement Canada《Laboratory manual for the evaluation of non-automatic weighing devices》（NAWDS Lab Manual，美国 NTEP 实验室亦使用）",
               "standard_numbers": [

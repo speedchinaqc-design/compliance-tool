@@ -18,6 +18,9 @@ dimensions:
   - id: EU-01
     modules:
     - "CRA"
+    evidence_types:
+    - "DoC"
+    - "技术文件"
     regulation_name: RED 授权法规 (EU) 2022/30（2025-08-01 起，EN 18031-1）；CRA (EU) 2024/2847（报告义务 2026-09-11，全面 2027-12-11）
     standard_numbers:
     - EN 18031-1
@@ -38,6 +41,9 @@ dimensions:
   - id: EU-02
     modules:
     - "电子产品"
+    evidence_types:
+    - "注册文件"
+    - "标签照片"
     regulation_name: PPWR (EU) 2025/40（2026-08-12 起适用）+ 各成员国包装 EPR 注册
     standard_numbers: []
     authority: 欧委会 / 成员国
@@ -58,6 +64,8 @@ dimensions:
   - id: EU-03
     modules:
     - "CRA"
+    evidence_types:
+    - "合规文档"
     regulation_name: GDPR (EU) 2016/679
     standard_numbers: []
     authority: 各国数据保护机构
@@ -77,6 +85,9 @@ dimensions:
   - id: EU-04
     modules:
     - "电子产品"
+    evidence_types:
+    - "DoC"
+    - "技术文件"
     regulation_name: RED 3.1(a)（引用 LVD 安全目标）；EN IEC 62368-1
     standard_numbers:
     - EN IEC 62368-1
@@ -101,6 +112,9 @@ dimensions:
   - id: EU-05
     modules:
     - "电子产品"
+    evidence_types:
+    - "DoC"
+    - "测试报告"
     regulation_name: RED 3.1(b)；EN 301 489-1/-17、EN 55032/55035
     standard_numbers:
     - EN 301 489-1/-17
@@ -128,6 +142,9 @@ dimensions:
   - id: EU-06
     modules:
     - "电子产品"
+    evidence_types:
+    - "DoC"
+    - "测试报告"
     regulation_name: RED 3.2；EN 300 328、EN 301 893。5150–5350 仅室内，5250–5350/5470–5725 须 DFS/TPC
     standard_numbers:
     - EN 300 328
@@ -164,6 +181,9 @@ dimensions:
   - id: EU-07
     modules:
     - "电池"
+    evidence_types:
+    - "注册文件"
+    - "标签照片"
     regulation_name: 电池法规 (EU) 2023/1542：标识、可拆卸（第 11 条，2027-02-18）、生产者 EPR
     standard_numbers: []
     authority: 欧委会 / 成员国
@@ -195,6 +215,9 @@ dimensions:
   - id: EU-08
     modules:
     - "计量"
+    evidence_types:
+    - "证书"
+    - "标签照片"
     regulation_name: NAWI 2014/31/EU；EN 45501 / OIML R76；WELMEC 2、7.2
     standard_numbers:
     - EN 45501

@@ -65,6 +65,7 @@
       "required": [
         "id",
         "modules",
+        "evidence_types",
         "regulation_name",
         "standard_numbers",
         "authority",
@@ -83,6 +84,14 @@
           "minItems": 1,
           "uniqueItems": true,
           "items": { "enum": ["电子产品", "电池", "CRA", "FCC/ISED", "计量"] }
+        },
+        "evidence_types": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["测试报告", "证书", "DoC", "标签照片", "说明书", "技术文件", "注册文件", "合规文档", "往来函件", "无"]
+          }
         },
         "regulation_name": { "type": "string", "minLength": 1 },
         "standard_numbers": {

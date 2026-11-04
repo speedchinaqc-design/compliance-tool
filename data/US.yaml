@@ -18,6 +18,8 @@ dimensions:
   - id: US-01
     modules:
     - "CRA"
+    evidence_types:
+    - "合规文档"
     regulation_name: 联邦：无强制；U.S. Cyber Trust Mark 自愿，截至 2026-11 尚未开放申请。加州 SB-327 联网设备合理安全（唯一密码）
     standard_numbers: []
     authority: FCC / 加州
@@ -37,6 +39,8 @@ dimensions:
   - id: US-02
     modules:
     - "电子产品"
+    evidence_types:
+    - "注册文件"
     regulation_name: 无联邦法；州包装 EPR（CA SB 54、OR、CO、ME、MN、MD、WA）
     standard_numbers: []
     authority: 各州
@@ -59,6 +63,8 @@ dimensions:
   - id: US-03
     modules:
     - "CRA"
+    evidence_types:
+    - "合规文档"
     regulation_name: 无联邦通用法；州隐私法（如 CCPA/CPRA）
     standard_numbers: []
     authority: 各州 AG
@@ -78,6 +84,9 @@ dimensions:
   - id: US-04
     modules:
     - "电子产品"
+    evidence_types:
+    - "证书"
+    - "测试报告"
     regulation_name: OSHA 29 CFR 1910.303 要求工作场所设备经 NRTL 认证；UL 62368-1
     standard_numbers:
     - UL 62368-1
@@ -99,6 +108,9 @@ dimensions:
     modules:
     - "电子产品"
     - "FCC/ISED"
+    evidence_types:
+    - "DoC"
+    - "测试报告"
     regulation_name: 47 CFR Part 15B（A/B 类数字设备）
     standard_numbers:
     - 47 CFR Part 15B
@@ -123,6 +135,9 @@ dimensions:
   - id: US-06
     modules:
     - "FCC/ISED"
+    evidence_types:
+    - "证书"
+    - "测试报告"
     regulation_name: Part 15.247（2.4 GHz）、15.407（U-NII）；U-NII-2A/2C 须 DFS；5850–5895 另有规定
     standard_numbers:
     - Part 15.247
@@ -160,6 +175,9 @@ dimensions:
   - id: US-07
     modules:
     - "电池"
+    evidence_types:
+    - "测试报告"
+    - "标签照片"
     regulation_name: Reese's Law 16 CFR 1263（消费品，商用秤可能不适用）；加州高氯酸盐锂纽扣电池标识
     standard_numbers:
     - 16 CFR 1263
@@ -184,6 +202,8 @@ dimensions:
   - id: US-08
     modules:
     - "计量"
+    evidence_types:
+    - "证书"
     regulation_name: NIST HB44 §2.20；NCWM Publication 14；HB130；参考 Measurement Canada《Laboratory manual for the evaluation of non-automatic weighing devices》（NAWDS Lab Manual，美国 NTEP 实验室亦使用）
     standard_numbers:
     - NIST HB44 §2.20

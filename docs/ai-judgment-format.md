@@ -22,6 +22,23 @@
 
 `docs/ai-judgment.sample.json` 只是格式示例，不是判断结果。
 
+## 证据对比清单
+
+同一个文件可以再带 `comparisons`。导入后按 `requirement` 写入该产品的对比清单，可再手改。
+
+| 字段 | 说明 |
+| --- | --- |
+| requirement | 清单条目编号 |
+| market | `EU`、`CA` 或 `US` |
+| module | 五个模块之一 |
+| status | `符合`、`差距`、`缺失`。也可写成 `✅符合`、`⚠️差距`、`❌缺失` |
+| reason | 理由。不能确定时写 `待确认` |
+| source | 依据从哪来 |
+| dropbox_path | 证据文件的 Dropbox 路径。不要把文件放进仓库 |
+| page | 页码。结论应能追溯到这一页 |
+
+示例不是真实差距结论。报告号不要编造，没有就写 `待确认`。
+
 ## JSON 示例
 
 ```json

@@ -18,5 +18,17 @@
       "source": "格式示例，不是 Dan Bot 的输出",
       "status": "待核实"
     }
+  ],
+  "comparisons": [
+    {
+      "requirement": "CA-07",
+      "market": "CA",
+      "module": "电池",
+      "status": "差距",
+      "reason": "示例/待确认：不是已核实的差距结论。",
+      "source": "示例",
+      "dropbox_path": "/合规知识库/02_产品/UNI-8/CA/07BATT/",
+      "page": "待确认"
+    }
   ]
 }

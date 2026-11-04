@@ -18,6 +18,8 @@ dimensions:
   - id: CA-01
     modules:
     - "CRA"
+    evidence_types:
+    - "无"
     regulation_name: 无针对联网产品的强制网络安全法
     standard_numbers: []
     authority: —
@@ -37,6 +39,8 @@ dimensions:
   - id: CA-02
     modules:
     - "电子产品"
+    evidence_types:
+    - "注册文件"
     regulation_name: 省级包装 EPR（安大略 O. Reg. 391/21、BC Recycling Regulation、魁北克）
     standard_numbers:
     - O. Reg. 391/21
@@ -58,6 +62,8 @@ dimensions:
   - id: CA-03
     modules:
     - "CRA"
+    evidence_types:
+    - "合规文档"
     regulation_name: PIPEDA
     standard_numbers: []
     authority: 加拿大隐私专员公署
@@ -77,6 +83,9 @@ dimensions:
   - id: CA-04
     modules:
     - "电子产品"
+    evidence_types:
+    - "证书"
+    - "标签照片"
     regulation_name: 各省电气法规（CSA C22.1）要求认证标志；CSA C22.2 No. 62368-1
     standard_numbers:
     - CSA C22.1
@@ -99,6 +108,9 @@ dimensions:
     modules:
     - "电子产品"
     - "FCC/ISED"
+    evidence_types:
+    - "DoC"
+    - "标签照片"
     regulation_name: ICES-003
     standard_numbers:
     - ICES-003
@@ -121,6 +133,9 @@ dimensions:
   - id: CA-06
     modules:
     - "FCC/ISED"
+    evidence_types:
+    - "证书"
+    - "测试报告"
     regulation_name: RSS-Gen、RSS-247（2.4 与 5 GHz LE-LAN）、RSS-102；5150–5250 仅室内，5600–5650 受限，DFS
     standard_numbers:
     - RSS-Gen
@@ -160,6 +175,10 @@ dimensions:
   - id: CA-07
     modules:
     - "电池"
+    evidence_types:
+    - "测试报告"
+    - "标签照片"
+    - "说明书"
     regulation_name: CCPSA 附表 3（2026-09-17 起纳入含纽扣电池的非玩具消费品）；危害公告引用 ANSI/UL 4200A-2023；产品、包装、说明书须有英法双语警示；另有省级电池 EPR
     standard_numbers:
     - ANSI/UL 4200A-2023
@@ -225,6 +244,8 @@ dimensions:
   - id: CA-08
     modules:
     - "计量"
+    evidence_types:
+    - "证书"
     regulation_name: Weights and Measures Act；Specifications Relating to Non-automatic Weighing Devices；评价程序见《Laboratory manual for the evaluation of non-automatic weighing devices》（NAWDS_Lab Manual-eng_V1.2，Measurement Canada 发布 ✓）
     standard_numbers:
     - NAWDS_Lab Manual-eng_V1.2
