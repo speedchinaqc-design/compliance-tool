@@ -5,12 +5,12 @@
     return root.ComplianceDom.el.apply(null, arguments);
   };
   var TABS = [
+    ["archive", "产品档案"],
     ["checklist", "合规清单"],
     ["modules", "模块"],
     ["documents", "文件模板"],
     ["labels", "标签模板"],
     ["tests", "产品测试"],
-    ["archive", "产品档案"],
     ["ai", "AI判断结果导入"],
   ];
 
@@ -52,7 +52,7 @@
     var head = el("div", { class: "workspace-head" }, [
       el("h2", {}, [project.name]),
       el("p", { class: "help" }, [
-        "市场 " + project.markets.join("、") + " · 模块 " + project.modules.join("、"),
+        "市场 " + project.markets.join("、") + " · 模块 " + project.modules.map(root.ComplianceStore.moduleLabel).join("、"),
       ]),
     ]);
     var back = el("button", { type: "button", class: "ghost", id: "back-list" }, ["项目列表"]);
@@ -70,6 +70,7 @@
       tabs.append(button);
     });
     page.append(tabs);
+    if (root.ComplianceStore.syncTodos(project, todoSources(project))) onChange(project);
     var body = el("div", { id: "workspace-body" });
     if (tab === "checklist") body.append(renderChecklist(project, onChange));
     if (tab === "modules") body.append(renderModules(project));
@@ -87,10 +88,130 @@
 
   function renderChecklist(project, onChange) {
     var rows = rowsFor(project);
-    var wrap = el("div", {}, [el("p", { class: "summary" }, ["适用清单 " + rows.length + " 条。状态和测试进度只存在这台浏览器，可导出 JSON。"])]);
+    var wrap = el("div", {}, [el("p", { class: "summary" }, ["适用清单 " + rows.length + " 条，另有固定的 GEN-CB。办理状态、备注和产品测试写在本机 data_local/store.json，浏览器和桌面版共用，并会随 Dropbox 备份。"])]);
     if (!rows.length) wrap.append(el("p", { class: "empty" }, ["当前市场、模块和问答下没有适用条目。"]));
     rows.forEach(function (row) { wrap.append(card(project, row, onChange)); });
+    wrap.append(cbChecklistCard(project, rows, onChange));
+    (project.customEntries || []).forEach(function (item) {
+      if (!item || item.removed) return;
+      wrap.append(customCard(project, item, onChange));
+    });
+    wrap.append(customForm(project, onChange));
     return wrap;
+  }
+
+  function customCard(project, item, onChange) {
+    var remove = el("button", { type: "button", class: "ghost" }, ["删除"]);
+    remove.addEventListener("click", function () {
+      item.removed = true;
+      root.ComplianceStore.syncTodos(project, todoSources(project));
+      onChange(project);
+      render(document.getElementById("app"), project, "checklist", onChange, root.__workspaceBack, root.__workspaceWizard);
+    });
+    var na = el("button", { type: "button", class: "ghost" }, ["标为不适用"]);
+    na.addEventListener("click", function () {
+      item.na = true;
+      root.ComplianceStore.syncTodos(project, todoSources(project));
+      onChange(project);
+      render(document.getElementById("app"), project, "checklist", onChange, root.__workspaceBack, root.__workspaceWizard);
+    });
+    return el("article", { class: "card", id: "row-" + item.id }, [
+      el("div", { class: "card-kicker" }, [
+        el("span", { class: "market" }, [item.market || ""]),
+        el("span", { class: "status status-pending" }, ["自定义"]),
+        el("span", { class: "dim" }, [item.module || ""]),
+      ]),
+      el("h3", {}, [item.id + " " + (item.name || "未命名")]),
+      el("p", {}, ["法规/标准：" + (item.regulation || "未填")]),
+      el("p", {}, ["所需证据：" + (item.evidence || "未填")]),
+      el("p", { class: "help" }, [item.note || ""]),
+      statusControls(project, item.id, onChange, function () {
+        render(document.getElementById("app"), project, "checklist", onChange, root.__workspaceBack, root.__workspaceWizard);
+      }),
+      el("div", { class: "wizard-bar" }, [na, remove]),
+    ]);
+  }
+
+  function customForm(project, onChange) {
+    var box = el("article", { class: "card", id: "add-entry" }, [
+      el("h3", {}, ["＋增加条目"]),
+      el("p", { class: "help" }, ["自定义条目编号形如 EU-C01，并自动生成一条待定的产品测试。删除或标为不适用后，那条测试改为已取消，记录仍留着。"]),
+    ]);
+    var name = el("input", { type: "text", placeholder: "名称" });
+    var market = el("select");
+    ["EU", "CA", "US", "GEN"].forEach(function (code) { market.append(el("option", { value: code }, [code])); });
+    var moduleName = el("select");
+    var modules = (project.modules || []).slice();
+    if (root.COMPLIANCE_DATA && root.COMPLIANCE_DATA.modules) {
+      root.COMPLIANCE_DATA.modules.forEach(function (item) {
+        if (modules.indexOf(item.id) === -1) modules.push(item.id);
+      });
+    }
+    modules.forEach(function (item) { moduleName.append(el("option", { value: item }, [item])); });
+    var regulation = el("input", { type: "text", placeholder: "法规/标准" });
+    var evidence = el("input", { type: "text", placeholder: "所需证据" });
+    var note = el("input", { type: "text", placeholder: "备注" });
+    var add = el("button", { type: "button" }, ["＋增加条目"]);
+    add.addEventListener("click", function () {
+      if (!name.value.trim()) {
+        window.alert("请填写名称。");
+        return;
+      }
+      project.customEntries = project.customEntries || [];
+      var id = root.ComplianceStore.nextCustomId(project, market.value);
+      project.customEntries.push({
+        id: id,
+        name: name.value.trim(),
+        market: market.value,
+        module: moduleName.value,
+        regulation: regulation.value.trim(),
+        evidence: evidence.value.trim(),
+        note: note.value.trim(),
+        custom: true,
+        removed: false,
+        na: false,
+      });
+      root.ComplianceStore.syncTodos(project, todoSources(project));
+      onChange(project);
+      render(document.getElementById("app"), project, "checklist", onChange, root.__workspaceBack, root.__workspaceWizard);
+    });
+    ["名称", "市场", "模块", "法规/标准", "所需证据", "备注"].forEach(function (label, index) {
+      box.append(el("label", { class: "attr" }, [label, [name, market, moduleName, regulation, evidence, note][index]]));
+    });
+    box.append(add);
+    return box;
+  }
+
+  function todoSources(project) {
+    var sources = [];
+    sources.push({ key: "req:GEN-CB", kind: "checklist", sourceId: "GEN-CB", title: "GEN-CB CB 体系" });
+    rowsFor(project).forEach(function (row) {
+      sources.push({
+        key: "req:" + row.entry.id,
+        kind: "checklist",
+        sourceId: row.entry.id,
+        title: row.entry.id + " " + (row.dimension.name_zh || "") + " " + (row.entry.regulation_name || ""),
+        na: row.entry.status === "N/A",
+      });
+    });
+    (project.customEntries || []).forEach(function (item) {
+      if (!item || !item.id) return;
+      sources.push({
+        key: "req:" + item.id,
+        kind: "checklist",
+        sourceId: item.id,
+        title: item.id + " 自定义 " + (item.name || ""),
+        removed: !!item.removed,
+        na: !!item.na && !item.removed,
+      });
+    });
+    root.ComplianceTemplates.forModules(project.modules || [], "document").forEach(function (item) {
+      sources.push({ key: "doc:" + item.id, kind: "document", sourceId: item.id, title: "文件模板 " + item.title });
+    });
+    root.ComplianceTemplates.forModules(project.modules || [], "label").forEach(function (item) {
+      sources.push({ key: "lbl:" + item.id, kind: "label", sourceId: item.id, title: "标签模板 " + item.title });
+    });
+    return sources;
   }
 
   function card(project, row, onChange) {
@@ -127,21 +248,115 @@
       article.append(el("p", { class: "reply-conclusion" }, [reply.conclusion]));
       article.append(el("p", { class: "help" }, [reply.letter]));
     }
-    var check = el("select", { "data-check": entry.id });
-    ["未办理", "进行中", "已完成"].forEach(function (label) {
-      var option = el("option", { value: label }, ["清单：" + label]);
-      if ((project.checks || {})[entry.id] === label) option.selected = true;
-      check.append(option);
-    });
-    if (!project.checks[entry.id]) project.checks[entry.id] = "未办理";
-    check.addEventListener("change", function () {
-      project.checks[entry.id] = check.value;
-      onChange(project);
-    });
-    article.append(el("label", { class: "attr" }, ["办理状态", check]));
+    article.append(statusControls(project, entry.id, onChange, function () {
+      render(document.getElementById("app"), project, "checklist", onChange, root.__workspaceBack, root.__workspaceWizard);
+    }));
     var imported = judgmentFor(project, entry.id);
     if (imported) article.append(renderJudgment(imported));
     return article;
+  }
+
+  function statusControls(project, id, onChange, rerender) {
+    var current = root.ComplianceStore.readCheck(project, id);
+    var wrap = el("div", { class: "check-fields" });
+    var check = el("select", { "data-check": id });
+    ["未办理", "进行中", "已完成", "不做"].forEach(function (label) {
+      var option = el("option", { value: label }, ["清单：" + label]);
+      if (current.status === label) option.selected = true;
+      check.append(option);
+    });
+    function commit(patch, refresh) {
+      root.ComplianceStore.applyChecklist(project, id, patch);
+      onChange(project);
+      if (refresh && rerender) rerender();
+    }
+    check.addEventListener("change", function () {
+      commit({ status: check.value }, true);
+    });
+    wrap.append(el("label", { class: "attr" }, ["办理状态", check]));
+    if (current.status === "不做") {
+      var reason = el("select");
+      [["不适用", "不适用"], ["已有证据覆盖", "已有证据覆盖"], ["领导层决定", "领导层决定"], ["其他", "其他"]].forEach(function (pair) {
+        var option = el("option", { value: pair[0] }, [pair[1]]);
+        if ((current.reason || "不适用") === pair[0]) option.selected = true;
+        reason.append(option);
+      });
+      if (!current.reason) root.ComplianceStore.applyChecklist(project, id, { status: "不做", reason: "不适用" });
+      reason.addEventListener("change", function () { commit({ status: "不做", reason: reason.value }, true); });
+      wrap.append(el("label", { class: "attr" }, ["不做原因", reason]));
+      if ((current.reason || "不适用") === "其他") {
+        var note = el("input", { type: "text", value: current.note || "", placeholder: "请写明原因" });
+        note.addEventListener("change", function () { commit({ status: "不做", reason: "其他", note: note.value.trim() }, false); });
+        wrap.append(el("label", { class: "attr" }, ["其他原因", note]));
+      }
+      if ((current.reason || "") === "领导层决定") {
+        var decider = el("input", { type: "text", value: current.decider || "" });
+        decider.addEventListener("change", function () { commit({ status: "不做", reason: "领导层决定", decider: decider.value.trim() }, false); });
+        wrap.append(el("label", { class: "attr" }, ["决定人", decider]));
+      }
+      var decidedOn = el("input", { type: "date", value: current.decidedOn || "" });
+      decidedOn.addEventListener("change", function () { commit({ status: "不做", decidedOn: decidedOn.value }, false); });
+      wrap.append(el("label", { class: "attr" }, ["决定日期", decidedOn]));
+      var latest = root.ComplianceStore.readCheck(project, id);
+      if (!latest.reason || !latest.decidedOn || (latest.reason === "其他" && !latest.note) || (latest.reason === "领导层决定" && !latest.decider)) {
+        wrap.append(el("p", { class: "note" }, ["请填写不做原因和决定日期。选「其他」要写原因，选「领导层决定」还要写决定人。"]));
+      }
+    }
+    var remark = el("textarea", { class: "fixed-note", rows: "4" }, [current.remark || ""]);
+    remark.addEventListener("change", function () { commit({ remark: remark.value }, false); });
+    wrap.append(el("label", { class: "attr" }, ["备注", remark]));
+    return wrap;
+  }
+
+  function cbChecklistCard(project, rows, onChange) {
+    var cb = project.archive && project.archive.basic && project.archive.basic.cb;
+    if (!cb && root.ComplianceStore.ensureArchive) {
+      root.ComplianceStore.ensureArchive(project);
+      cb = project.archive.basic.cb;
+    }
+    var article = el("article", { class: "card", id: "row-GEN-CB" }, [
+      el("div", { class: "card-kicker" }, [
+        el("span", { class: "market" }, ["通用"]),
+        el("span", { class: "status status-pending" }, ["CB 体系"]),
+      ]),
+      el("h3", {}, ["GEN-CB CB 体系"]),
+      el("p", { class: "help" }, ["每个产品都有这一行，不必勾选模块。证书号、有效期和路径与档案里的 CB 页是同一份。"]),
+    ]);
+    function saveCb() { onChange(project); }
+    article.append(textField("CB 证书号", cb.number, function (value) { cb.number = value; saveCb(); }));
+    article.append(dateField("有效期", cb.expiry, function (value) { cb.expiry = value; saveCb(); rerenderChecklist(); }));
+    article.append(pathField("证书 Dropbox 路径", cb.certificatePath, function (value) { cb.certificatePath = value; saveCb(); }));
+    var days = root.ComplianceStore.daysUntil(cb.expiry);
+    if (days != null && days <= 90) article.append(el("p", { class: "note" }, [days < 0 ? "CB 证书已过期：" + cb.expiry : "CB 证书将在 " + days + " 天内到期：" + cb.expiry]));
+    (cb.links || []).forEach(function (linked) {
+      var row = rows.filter(function (entry) { return entry.entry.id === linked; })[0];
+      if (!row || !cb.standardVersion) return;
+      var gap = root.ComplianceStore.versionGap({ standardVersion: cb.standardVersion }, row.entry);
+      if (gap === "版本可能不一致") article.append(el("p", { class: "note" }, [linked + "：标准版本" + gap + "（" + cb.standardVersion + "）"]));
+    });
+    function rerenderChecklist() {
+      render(document.getElementById("app"), project, "checklist", onChange, root.__workspaceBack, root.__workspaceWizard);
+    }
+    article.append(statusControls(project, "GEN-CB", onChange, rerenderChecklist));
+    return article;
+  }
+
+  function textField(label, value, onValue) {
+    var input = el("input", { type: "text", value: value || "" });
+    input.addEventListener("change", function () { onValue(input.value); });
+    return el("label", { class: "attr" }, [label, input]);
+  }
+
+  function dateField(label, value, onValue) {
+    var input = el("input", { type: "date", value: value || "" });
+    input.addEventListener("change", function () { onValue(input.value); });
+    return el("label", { class: "attr" }, [label, input]);
+  }
+
+  function pathField(label, value, onValue) {
+    var input = el("input", { type: "text", value: value || "" });
+    input.addEventListener("change", function () { onValue(input.value); });
+    return el("div", { class: "path-field" }, [el("label", { class: "attr" }, [label, input]), root.CompliancePaths.buttons(function () { return input.value; })]);
   }
 
   function renderJudgment(item) {
@@ -162,7 +377,7 @@
     root.COMPLIANCE_DATA.modules.forEach(function (mod) {
       if (project.modules.indexOf(mod.id) === -1) return;
       var block = el("article", { class: "card" }, [
-        el("h3", {}, [mod.id]),
+        el("h3", {}, [root.ComplianceStore.moduleLabel(mod.id)]),
         el("p", {}, [mod.summary]),
       ]);
       rowsFor(project).forEach(function (row) {
@@ -193,46 +408,94 @@
   }
 
   function renderTests(project, onChange) {
-    var rows = rowsFor(project);
-    var wrap = el("div", {}, [el("p", {}, ["为每条适用要求记测试进度和证书到期日。日期留空表示还没有证书。工具不计算是否已经过期以外的结论。"])]);
-    var soon = [];
-    rows.forEach(function (row) {
-      var test = ensureTest(project, row.entry.id);
-      if (test.expiry && withinDays(test.expiry, 90)) soon.push(row.entry.id + " · " + test.expiry);
-    });
-    wrap.append(el("p", { class: soon.length ? "note" : "help" }, [soon.length ? "已到期或 90 天内到期：" + soon.join("；") : "没有填在 90 天内到期或已到期的证书。"]));
-    rows.forEach(function (row) {
-      var test = ensureTest(project, row.entry.id);
-      var status = el("select");
-      ["未开始", "进行中", "已完成", "待确认"].forEach(function (label) {
-        var option = el("option", { value: label }, [label]);
-        if (test.status === label) option.selected = true;
-        status.append(option);
-      });
-      status.addEventListener("change", function () {
-        test.status = status.value;
-        onChange(project);
-      });
-      var expiry = el("input", { type: "date", value: test.expiry || "" });
-      expiry.addEventListener("change", function () {
-        test.expiry = expiry.value;
-        onChange(project);
-        render(document.getElementById("app"), project, "tests", onChange, root.__workspaceBack, root.__workspaceWizard);
-      });
-      var note = el("input", { type: "text", value: test.note || "", placeholder: "报告号或 Dropbox 文件名，待确认" });
-      note.addEventListener("change", function () {
-        test.note = note.value;
-        onChange(project);
-      });
-      wrap.append(el("article", { class: "card" }, [
-        el("h3", {}, [row.marketName + " · " + row.dimension.name_zh]),
-        el("p", { class: "help" }, [row.matrixKey]),
-        el("label", { class: "attr" }, ["测试进度", status]),
-        el("label", { class: "attr" }, ["证书到期日", expiry]),
-        el("label", { class: "attr" }, ["备注", note]),
-      ]));
-    });
+    var counts = root.ComplianceStore.todoCounts(project.todos);
+    var wrap = el("div", { id: "todo-list" }, [
+      el("p", { id: "todo-counts" }, ["待定 " + counts.pending + " · 进行中 " + counts.doing + " · 逾期 " + counts.overdue]),
+      el("p", { class: "help" }, ["每条合规清单、文件模板和标签模板对应一条待办。结论可以是要做、不做或待定。来源删除或标成不适用后，这条改为已取消，记录保留。旧的产品测试进度会迁到这里，原来的 tests 字段仍留在数据里。"]),
+    ]);
+    (project.todos || []).forEach(function (todo) { wrap.append(todoCard(project, todo, onChange)); });
     return wrap;
+  }
+
+  function todoCard(project, todo, onChange) {
+    function save(rerender) {
+      root.ComplianceStore.applyTodoToCheck(project, todo);
+      onChange(project);
+      if (rerender) render(document.getElementById("app"), project, "tests", onChange, root.__workspaceBack, root.__workspaceWizard);
+    }
+    var conclusion = el("select");
+    ["待定", "要做", "不做"].forEach(function (label) {
+      var option = el("option", { value: label }, [label]);
+      if (todo.conclusion === label) option.selected = true;
+      conclusion.append(option);
+    });
+    if (todo.conclusion === "已取消") conclusion.append(el("option", { value: "已取消", selected: "selected" }, ["已取消"]));
+    conclusion.addEventListener("change", function () {
+      if (todo.conclusion === "已取消") todo.priorConclusion = "";
+      todo.conclusion = conclusion.value;
+      if (todo.conclusion !== "不做") todo.skipReason = "";
+      if (todo.conclusion !== "已取消") todo.cancelReason = "";
+      save(true);
+    });
+    var block = el("article", { class: "card", id: "todo-" + todo.key }, [
+      el("h3", {}, [todo.title || todo.key]),
+      el("p", { class: "help" }, [todo.kind === "document" ? "文件模板" : todo.kind === "label" ? "标签模板" : (String(todo.sourceId || "").indexOf("-C") !== -1 ? "自定义清单" : "合规清单")]),
+      todo.conclusion === "已取消" ? el("p", { class: "missing" }, ["已取消" + (todo.cancelReason ? "：" + todo.cancelReason : "")]) : null,
+      el("label", { class: "attr" }, ["结论", conclusion]),
+    ]);
+    if (todo.conclusion === "不做") {
+      var reason = el("select");
+      [["不适用", "不适用"], ["已有证据覆盖", "已有证据覆盖"], ["领导层决定", "领导层决定"], ["其他", "其他"]].forEach(function (pair) {
+        var option = el("option", { value: pair[0] }, [pair[1]]);
+        if (todo.skipReason === pair[0]) option.selected = true;
+        reason.append(option);
+      });
+      if (!todo.skipReason) todo.skipReason = "不适用";
+      reason.addEventListener("change", function () { todo.skipReason = reason.value; save(true); });
+      block.append(el("label", { class: "attr" }, ["不做的原因", reason]));
+      if (todo.skipReason === "领导层决定") {
+        var decider = el("input", { type: "text", value: todo.decider || "" });
+        decider.addEventListener("change", function () { todo.decider = decider.value.trim(); save(false); });
+        var decidedOn = el("input", { type: "date", value: todo.decidedOn || "" });
+        decidedOn.addEventListener("change", function () { todo.decidedOn = decidedOn.value; save(false); });
+        block.append(el("label", { class: "attr" }, ["决定人", decider]));
+        block.append(el("label", { class: "attr" }, ["决定日期", decidedOn]));
+        if (!todo.decider || !todo.decidedOn) block.append(el("p", { class: "note" }, ["请填写决定人和决定日期。"]));
+      }
+      if (todo.skipReason === "其他") {
+        var other = el("input", { type: "text", value: todo.note || "", placeholder: "请写明原因" });
+        other.addEventListener("change", function () { todo.note = other.value.trim(); save(false); });
+        block.append(el("label", { class: "attr" }, ["其他原因", other]));
+        if (!todo.note) block.append(el("p", { class: "note" }, ["请填写原因。"]));
+      }
+    }
+    if (todo.conclusion === "要做") {
+      var owner = el("input", { type: "text", value: todo.owner || "" });
+      owner.addEventListener("change", function () { todo.owner = owner.value.trim(); save(false); });
+      var due = el("input", { type: "date", value: todo.due || "" });
+      due.addEventListener("change", function () { todo.due = due.value; save(true); });
+      var progress = el("select");
+      ["未开始", "进行中", "已完成"].forEach(function (label) {
+        var option = el("option", { value: label }, [label]);
+        if ((todo.progress || "未开始") === label) option.selected = true;
+        progress.append(option);
+      });
+      progress.addEventListener("change", function () { todo.progress = progress.value; save(true); });
+      var evidence = el("input", { type: "text", value: (todo.evidenceIds || []).join("、"), placeholder: "证据 id，用顿号分隔" });
+      evidence.addEventListener("change", function () {
+        todo.evidenceIds = evidence.value.split(/[、,，\s]+/).map(function (part) { return part.trim(); }).filter(Boolean);
+        save(false);
+      });
+      block.append(el("label", { class: "attr" }, ["负责人", owner]));
+      block.append(el("label", { class: "attr" }, ["计划完成日期", due]));
+      block.append(el("label", { class: "attr" }, ["进度", progress]));
+      block.append(el("label", { class: "attr" }, ["关联证据", evidence]));
+      if (todo.due && root.ComplianceStore.daysUntil(todo.due) != null && root.ComplianceStore.daysUntil(todo.due) < 0 && todo.progress !== "已完成") {
+        block.append(el("p", { class: "missing" }, ["逾期"]));
+      }
+    }
+    if (todo.expiry) block.append(el("p", { class: "help" }, ["原证书到期日：" + todo.expiry]));
+    return block;
   }
 
   function renderAi(project, onChange) {
@@ -272,7 +535,7 @@
 
   function ensureTest(project, id) {
     project.tests = project.tests || {};
-    if (!project.tests[id]) project.tests[id] = { status: "未开始", expiry: "", note: "" };
+    if (!project.tests[id]) project.tests[id] = { status: "未开始", expiry: "", note: "", decider: "", decidedOn: "" };
     return project.tests[id];
   }
 
@@ -294,6 +557,11 @@
     var table = root.ComplianceLogic.exportTable(rows, projectState(project), root.COMPLIANCE_DATA.product);
     table.sheets[1].rows.push(["产品", project.name]);
     table.sheets[1].rows.push(["免责声明", root.ComplianceStore.DISCLAIMER]);
+    var decisions = [["条目", "结论", "原因", "负责人", "计划完成", "进度", "决定人", "决定日期", "备注"]];
+    (project.todos || []).forEach(function (todo) {
+      decisions.push([todo.sourceId || todo.key, todo.conclusion, todo.skipReason || todo.cancelReason || "", todo.owner || "", todo.due || "", todo.progress || "", todo.decider || "", todo.decidedOn || "", todo.note || ""]);
+    });
+    table.sheets.push({ name: "测试决定", rows: decisions });
     var bytes = root.buildXlsx(table.sheets);
     var blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     var link = document.createElement("a");
@@ -308,5 +576,6 @@
     render: render,
     rowsFor: rowsFor,
     projectState: projectState,
+    todoSources: todoSources,
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);

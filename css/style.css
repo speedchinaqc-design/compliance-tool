@@ -390,7 +390,52 @@ a.button-link {
 
 .workspace-head h2 { margin-bottom: 4px; }
 
-.thumb { max-width: 160px; height: auto; border: 1px solid var(--line); }
+.thumb { max-width: 120px; height: auto; border: 1px solid var(--line); background: white; }
+
+.table-scroll { overflow-x: auto; }
+
+.variant-table input,
+.variant-table select,
+.variant-table textarea { width: 100%; box-sizing: border-box; }
+
+.variant-table .photo-stack { min-width: 220px; }
+
+.variant-table td { min-width: 8rem; }
+
+.screen-line { display: flex; gap: 6px; align-items: flex-end; margin: 0 0 6px; flex-wrap: wrap; }
+
+.screen-side { display: flex; gap: 4px; flex: 1 1 16rem; }
+
+textarea.fixed-note, .fixed-note {
+  width: 100%;
+  height: 6.4rem;
+  max-height: 6.4rem;
+  resize: none;
+  overflow-y: auto;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+}
+
+.variant-table .screen-line select,
+.variant-table .screen-line input { width: auto; flex: 1 1 0; min-width: 0; }
+
+.screen-line button { flex: 0 0 auto; }
+
+.archive-filter { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin: 8px 0; }
+
+.archive-filter fieldset { border: 1px solid var(--line); margin: 0; padding: 8px; min-width: 10rem; }
+
+.archive-filter legend { padding: 0 4px; font-weight: 650; }
+
+.archive-filter .choice { margin: 4px 0; }
+
+.missing { color: #8d2f2f; }
+
+button.missing { color: #8d2f2f; border-color: #8d2f2f; }
+
+#overview-missing { margin: 8px 0; padding-left: 1.2rem; }
+
+#main-thumbs .card { padding: 8px; }
 
 @media print {
   body.print-archive .top,

@@ -20,7 +20,9 @@ from library import (
     default_dropbox_root,
     ensure_backup_dir,
     library_map,
+    local_preview,
     open_folder,
+    pick_image_files,
     resolve_root,
     scan_model,
 )
@@ -273,6 +275,26 @@ class LocalHandler(SimpleHTTPRequestHandler):
                 }
             )
             return
+        if path == "/api/preview":
+            from urllib.parse import parse_qs, urlparse
+
+            query = parse_qs(urlparse(self.path).query)
+            target = (query.get("path") or [""])[0]
+            with LOCK:
+                store = read_store()
+            root = resolve_root(store["settings"].get("dropboxRoot"))
+            try:
+                file_path, mime = local_preview(root, target)
+            except ValueError as exc:
+                self._send_json({"ok": False, "error": str(exc)}, 404)
+                return
+            body = file_path.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", mime)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if path == "/api/files":
             query = self.path.split("?", 1)[1] if "?" in self.path else ""
             model = ""
@@ -333,6 +355,12 @@ class LocalHandler(SimpleHTTPRequestHandler):
                 self._send_json(create_product_folders(root, model))
             except ValueError as exc:
                 self._send_json({"ok": False, "error": str(exc)}, 400)
+            return
+        if path == "/api/pick-images":
+            with LOCK:
+                store = read_store()
+            root = resolve_root(store["settings"].get("dropboxRoot"))
+            self._send_json(pick_image_files(root))
             return
         if path == "/api/open-folder":
             try:

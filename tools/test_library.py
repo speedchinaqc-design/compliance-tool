@@ -3,7 +3,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from library import create_product_folders, open_folder, parse_filename, scan_model
+from library import create_product_folders, local_preview, open_folder, parse_filename, scan_model, to_library_path
 
 os.environ["COMPLIANCE_OPEN"] = "0"
 
@@ -24,6 +24,7 @@ def main() -> None:
         made = create_product_folders(root, "UNI-8")
         assert made["created"] and (root / "02_产品" / "UNI-8" / "EU" / "08METRO_法制计量" / "readme.txt").is_file()
         assert (root / "02_产品" / "UNI-8" / "09_其他资料" / "待分类").is_dir()
+        assert (root / "02_产品" / "UNI-8" / "GEN" / "04ELEC_电气安全").is_dir()
         unsorted = root / "02_产品" / "UNI-8" / "09_其他资料" / "待分类" / "loose.pdf"
         unsorted.write_bytes(b"x")
         reference = root / "02_产品" / "UNI-8" / "09_其他资料" / "参考" / "UNI-8_GEN_00GEN_RPT_CB12345_20260301_v1.pdf"
@@ -44,6 +45,22 @@ def main() -> None:
         try:
             open_folder(root, "/合规知识库/../outside", True)
             raise SystemExit("应当拒绝跑出根目录")
+        except ValueError:
+            pass
+        shot = root / "02_产品" / "UNI-8" / "shot.png"
+        assert to_library_path(root, shot) == "/合规知识库/02_产品/UNI-8/shot.png"
+        assert to_library_path(root, root.parent / "secret.png") is None
+        shot.write_bytes(b"\x89PNG\r\n\x1a\n")
+        preview, mime = local_preview(root, "/合规知识库/02_产品/UNI-8/shot.png")
+        assert preview == shot and mime == "image/png"
+        try:
+            local_preview(root, "/合规知识库/../secret.png")
+            raise SystemExit("缩略图应当拒绝跑出根目录")
+        except ValueError:
+            pass
+        try:
+            local_preview(root, "/合规知识库/02_产品/UNI-8/EU/08METRO_法制计量/readme.txt")
+            raise SystemExit("非图片不能当缩略图")
         except ValueError:
             pass
     print("library tests passed")

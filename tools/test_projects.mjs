@@ -41,7 +41,7 @@ function assert(cond, message) {
   if (!cond) throw new Error(message);
 }
 
-assert(data.modules.map((item) => item.id).join(",") === "电子产品,电池,CRA,FCC/ISED,计量", "模块目录不对");
+assert(data.modules.map((item) => item.id).join(",") === "电子产品,电池,CRA,FCC/ISED,计量,CB 体系（IEC 62368-1）", "模块目录不对");
 const tagged = data.markets.flatMap((market) => market.dimensions.flatMap((dim) => dim.entries));
 assert(tagged.length === 24, "仍然应是 24 条");
 assert(tagged.every((entry) => entry.modules && entry.modules.length), "每条都要有模块");
@@ -130,4 +130,147 @@ const flagged = store.applyRegulationUpdates([sample], {
   updates: [{ requirement: "CA-07", source_url: "https://example.com/ca", detected_at: "2026-11-04", summary: "来源页有变化" }],
 });
 assert(flagged === 1 && sample.reviews["CA-07"].status === "需要复核", "应标记需要复核");
+
+const legacy = store.blankArchive();
+legacy.basic.photoPath = "/合规知识库/02_产品/UNI-8/照片_待确认/";
+legacy.basic.variants = "UNI-8B、8P、8EV、8RP、";
+legacy.basic.status = "送测";
+legacy.basic.statusNote = "旧说明";
+legacy.basic.launchDates = { EU: "2026-03-01", CA: "", US: "" };
+delete legacy.basic.variantRows;
+assert(store.migrateVariants(legacy) === true, "旧变体字符串应迁移");
+assert(legacy.basic.variants.join("、") === "UNI-8B、8P、8EV、8RP", "空段应丢掉，型号保留");
+assert(legacy.basic.variantRows.filter((row) => row.model).length === 4, "应拆成 4 行");
+assert(legacy.basic.variantRows.length >= 6, "默认至少 6 行");
+assert(legacy.basic.variantRows[0].status === "送测" && legacy.basic.variantRows[3].status === "送测", "旧状态应复制到每一行");
+assert(legacy.basic.variantRows[0].statusNote === "旧说明" && legacy.basic.variantRows[2].launchDates.EU === "2026-03-01", "说明和上市日期应复制");
+assert(legacy.basic.status === "送测" && legacy.basic.launchDates.EU === "2026-03-01", "产品级旧字段要留着");
+assert(legacy.basic.photoPath.indexOf("照片_待确认") !== -1, "主型号照片路径不能丢");
+assert(store.aggregateStatus(legacy.basic) === "未上市", "都还没上市");
+legacy.basic.variantRows[0].status = "已上市";
+assert(store.aggregateStatus(legacy.basic) === "部分已上市");
+legacy.basic.variantRows.forEach((row) => { if (row.model) row.status = "已上市"; });
+assert(store.aggregateStatus(legacy.basic) === "全部已上市");
+const snapshot = JSON.stringify(legacy.basic.variantRows);
+assert(store.migrateVariants(legacy) === false, "再次迁移不能改行");
+assert(JSON.stringify(legacy.basic.variantRows) === snapshot, "迁移应幂等");
+
+const waived = store.uni8Project();
+const missing = { requirement: "EU-07", market: "EU", status: "缺失", reason: "", source: "", dropboxPath: "", page: "" };
+assert(store.countsAsMissing(waived, missing), "未决定时缺失仍要计数");
+waived.tests["EU-07"] = { status: store.WAIVER_STATUS, decider: "", decidedOn: "", note: "先不做" };
+assert(!store.countsAsMissing(waived, missing), "决定先不做测试后不计入缺失");
+assert(store.waiverRecords(waived)[0].complete === false, "缺决定人时应标未完成");
+waived.tests["EU-07"].decider = "王敏";
+waived.tests["EU-07"].decidedOn = "2026-11-01";
+assert(store.waiverRecords(waived)[0].complete === true && store.waiverRecords(waived)[0].note === "先不做");
+const packWithDecision = store.auditPack(waived, "EU", false);
+assert(packWithDecision.testDecisions.length === 1, "审核包应带上测试决定");
+assert(packWithDecision.technicalIndex.some((line) => line.indexOf("王敏") !== -1), "技术文件目录应写决定人");
+
+const sized = store.blankArchive();
+sized.basic.variantRows = [{
+  model: "UNI-8B",
+  screen: "7 寸双屏",
+  status: "研发",
+  statusNote: "",
+  launchDates: { EU: "", CA: "", US: "" },
+  photos: ["", "", ""],
+  nameplatePhotos: ["", "", ""],
+  labelInfo: "",
+}];
+assert(store.migrateVariants(sized) === true, "旧屏幕尺寸应迁进第一项");
+const sizedRow = sized.basic.variantRows[0];
+assert(sizedRow.screens[0].text === "7 寸双屏", "旧的整段文字应原样留下");
+assert(store.screenSummary(sizedRow.screens) === "操作屏+客显屏 7 寸双屏");
+sizedRow.screens[0].text = "10寸+7寸";
+sizedRow.screens.push({ text: "10寸+10寸" });
+store.touchVariants(sized);
+assert(sizedRow.screen === "操作屏+客显屏 10寸+7寸；10寸+10寸", "汇总应按行拼接");
+const sizedSnap = JSON.stringify(sized.basic.variantRows);
+assert(store.migrateVariants(sized) === false, "屏幕列表再次迁移不能改写");
+assert(JSON.stringify(sized.basic.variantRows) === sizedSnap);
+const paired = store.blankArchive();
+paired.basic.variantRows = [{
+  model: "UNI-8B",
+  screens: [
+    { operator: { type: "操作屏", size: "10寸" }, customer: { type: "客显屏", size: "7寸" } },
+    { operator: { type: "操作屏", size: "10寸" }, customer: { type: "客显屏", size: "10寸" } },
+    { operator: { type: "操作屏", size: "" }, customer: { type: "客显屏", size: "" } },
+  ],
+  status: "研发",
+  statusNote: "",
+  launchDates: { EU: "", CA: "", US: "" },
+  photos: [{ path: "", typical: true }],
+  nameplatePhotos: [{ path: "", typical: true }],
+  labelInfo: "",
+}];
+assert(store.migrateVariants(paired) === true);
+assert(paired.basic.variantRows[0].screens.length === 2, "空行应丢掉");
+assert(paired.basic.variantRows[0].screens[0].text === "10寸+7寸" && paired.basic.variantRows[0].screens[1].text === "10寸+10寸");
+assert(paired.basic.variantRows[0].screens[0].operator.size === "10寸", "原来的尺寸要留在数据里");
+assert(store.screenSummary(paired.basic.variantRows[0].screens) === "操作屏+客显屏 10寸+7寸；10寸+10寸");
+
+const cell = store.uni8Project();
+assert(store.homeCellFlags(cell, ["CA-07"], [], []).indexOf("缺证据") !== -1, "没有证据应算缺证据");
+cell.tests["CA-07"] = { status: store.WAIVER_STATUS, decider: "王敏", decidedOn: "2026-11-01", note: "" };
+const waivedFlags = store.homeCellFlags(cell, ["CA-07"], [], []);
+assert(waivedFlags.indexOf("领导层决定不测试") !== -1 && waivedFlags.indexOf("缺证据") === -1, "决定不测试后不再算缺证据");
+assert(waivedFlags.indexOf("已齐全") !== -1);
+cell.reviews = { "CA-07": { status: "需要复核" } };
+assert(store.homeCellFlags(cell, ["CA-07"], [], []).indexOf("需要复核") !== -1);
+const soon = new Date(Date.now() + 10 * 86400000).toISOString().slice(0, 10);
+assert(store.homeCellFlags(cell, ["CA-07"], [], [{ requirementIds: ["CA-07"], expiry: soon }]).indexOf("即将过期") !== -1);
+
+const todoProject = store.uni8Project();
+todoProject.tests["CA-07"] = { status: store.WAIVER_STATUS, decider: "王敏", decidedOn: "2026-11-01", note: "先不做", expiry: "2027-01-01" };
+const sources = [
+  { key: "req:CA-07", kind: "checklist", sourceId: "CA-07", title: "CA-07 电池" },
+  { key: "req:EU-C01", kind: "checklist", sourceId: "EU-C01", title: "EU-C01 自定义 附加", removed: true },
+];
+assert(store.syncTodos(todoProject, sources) === true, "第一次应迁入旧测试");
+const migratedTodo = todoProject.todos.find((item) => item.key === "req:CA-07");
+assert(migratedTodo.conclusion === "不做" && migratedTodo.skipReason === "领导层决定", "领导层决定应迁成不做");
+assert(migratedTodo.decider === "王敏" && migratedTodo.expiry === "2027-01-01", "决定人和原到期日要留下");
+assert(todoProject.tests["CA-07"].status === store.WAIVER_STATUS, "旧 tests 字段不能删");
+assert(todoProject.todos.find((item) => item.key === "req:EU-C01").conclusion === "已取消");
+assert(store.syncTodos(todoProject, sources) === false, "待办同步应幂等");
+assert(store.isTestWaived(todoProject, "CA-07"), "迁完后仍算领导层决定");
+todoProject.customEntries = [{ id: "EU-C01", removed: true }];
+assert(store.nextCustomId(todoProject, "EU") === "EU-C02");
+const photos = store.normalizePhotoList(["/a.jpg", "", "/b.jpg"]);
+assert(photos.length === 2 && photos[0].typical && photos[0].path === "/a.jpg" && photos[1].path === "/b.jpg", "原三格照片应收成列表");
+const thumbs = store.blankArchive();
+thumbs.basic.thumbnail = "data:image/gif;base64,abc";
+delete thumbs.basic.thumbnails;
+assert(store.migrateVariants(thumbs) === true);
+assert(thumbs.basic.thumbnails.length === 1 && thumbs.basic.thumbnails[0].main && thumbs.basic.thumbnail.indexOf("base64") !== -1);
+const summary = store.overview(store.uni8Project());
+assert(summary.label.indexOf("已填 ") === 0 && summary.items.some((item) => item.text === "未填：CB 证书号"));
+
+const linked = store.uni8Project();
+store.syncTodos(linked, [{ key: "req:CA-07", kind: "checklist", sourceId: "CA-07", title: "CA-07" }, { key: "req:GEN-CB", kind: "checklist", sourceId: "GEN-CB", title: "GEN-CB CB 体系" }]);
+store.applyChecklist(linked, "CA-07", { status: "不做", reason: "不适用", decidedOn: "2026-11-04" });
+const linkedTodo = linked.todos.find((item) => item.sourceId === "CA-07");
+assert(linkedTodo.conclusion === "不做" && linkedTodo.skipReason === "不适用" && linkedTodo.decidedOn === "2026-11-04", "清单不做应写到待办");
+linkedTodo.conclusion = "待定";
+store.applyTodoToCheck(linked, linkedTodo);
+assert(linked.checks["CA-07"] === "未办理", "待办离开不做后清单应回到未办理");
+linkedTodo.conclusion = "不做";
+linkedTodo.skipReason = "已有证据覆盖";
+linkedTodo.decidedOn = "2026-11-05";
+store.applyTodoToCheck(linked, linkedTodo);
+assert(linked.checks["CA-07"] === "不做" && linked.checkMeta["CA-07"].reason === "已有证据覆盖" && linked.checkMeta["CA-07"].decidedOn === "2026-11-05");
+assert(linked.todos.some((item) => item.sourceId === "GEN-CB"), "每个产品都有 GEN-CB 待办");
+
+const cbArch = store.blankArchive();
+cbArch.basic.cb.number = "CB123";
+cbArch.basic.cb.standardVersion = "2018";
+cbArch.basic.cb.certificatePath = "/合规知识库/02_产品/UNI-8/GEN/04ELEC_电气安全/cert.pdf";
+cbArch.basic.cb.issueDate = "2026-01-01";
+delete cbArch.basic.cb.history;
+assert(store.migrateVariants(cbArch) === true);
+assert(cbArch.basic.cb.history.length === 1 && cbArch.basic.cb.history[0].readonly && cbArch.basic.cb.history[0].number === "CB123" && cbArch.basic.cb.history[0].summary === "由现有 CB 资料迁入");
+const historyId = cbArch.basic.cb.history[0].id;
+assert(store.migrateVariants(cbArch) === false && cbArch.basic.cb.history[0].id === historyId, "CB 履历不能每次换新");
 console.log("project tests passed");

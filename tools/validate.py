@@ -221,8 +221,8 @@ def known_urls(markets: dict[str, dict]) -> set[str]:
 
 def check_modules(markets: dict[str, dict], catalog: dict, questions: dict, errors: list[str]) -> None:
     ids = [item["id"] for item in catalog["modules"]]
-    if ids != ["电子产品", "电池", "CRA", "FCC/ISED", "计量"]:
-        errors.append("模块顺序应为：电子产品、电池、CRA、FCC/ISED、计量。")
+    if ids != ["电子产品", "电池", "CRA", "FCC/ISED", "计量", "CB 体系（IEC 62368-1）"]:
+        errors.append("模块顺序应为：电子产品、电池、CRA、FCC/ISED、计量、CB 体系（IEC 62368-1）。")
     if catalog.get("phase_markets") != ["EU", "CA", "US"]:
         errors.append("第一期市场只能是 EU、CA、US。")
     seen = {}

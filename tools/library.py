@@ -99,6 +99,8 @@ def create_product_folders(root: Path, model: str) -> dict:
     model = safe_model(model)
     dest = product_dir(root, model)
     if dest.exists():
+        if root.is_dir():
+            ensure_cb_folder(dest)
         return {"ok": True, "created": False, "path": str(dest), "note": "文件夹已经存在"}
     if not root.is_dir():
         return {"ok": False, "created": False, "path": str(dest), "note": "Dropbox 根目录不存在"}
@@ -106,17 +108,23 @@ def create_product_folders(root: Path, model: str) -> dict:
     if source.is_dir():
         shutil.copytree(source, dest)
         ensure_other_folders(dest)
+        ensure_cb_folder(dest)
         return {"ok": True, "created": True, "path": str(dest), "note": "已从 _新产品模板复制"}
     for market in MARKETS:
         for folder in FOLDER_BY_CODE.values():
             (dest / market / folder).mkdir(parents=True, exist_ok=True)
     ensure_other_folders(dest)
+    ensure_cb_folder(dest)
     return {"ok": True, "created": True, "path": str(dest), "note": "没有找到 _新产品模板，已按同样结构新建空文件夹"}
 
 
 def ensure_other_folders(dest: Path) -> None:
     for bucket in OTHER_BUCKETS:
         (dest / "09_其他资料" / bucket).mkdir(parents=True, exist_ok=True)
+
+
+def ensure_cb_folder(dest: Path) -> None:
+    (dest / "GEN" / "04ELEC_电气安全").mkdir(parents=True, exist_ok=True)
 
 
 def _inside(root: Path, path: Path) -> bool:
@@ -288,6 +296,96 @@ def open_folder(root: Path, text: str, create: bool) -> dict:
     else:
         subprocess.Popen(["xdg-open", str(folder)])
     return {"ok": True, "opened": True, "path": str(folder)}
+
+
+IMAGE_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".bmp": "image/bmp",
+}
+
+
+def local_preview(root: Path, text: str) -> tuple[Path, str]:
+    """返回 Dropbox 根目录内的一张本地图片。不把文件复制进仓库。"""
+    if not root.is_dir():
+        raise ValueError("Dropbox 根目录不存在")
+    path = logical_to_local(root, text)
+    if not _inside(root, path):
+        raise ValueError("路径超出 Dropbox 根目录")
+    if not path.is_file():
+        raise ValueError("不是本地文件")
+    mime = IMAGE_TYPES.get(path.suffix.lower())
+    if not mime:
+        raise ValueError("不是图片")
+    if path.stat().st_size > 12_000_000:
+        raise ValueError("图片太大")
+    return path, mime
+
+
+def to_library_path(root: Path, file_path: Path) -> str | None:
+    path = Path(file_path)
+    if not _inside(root, path):
+        return None
+    relative = path.resolve().relative_to(root.resolve()).as_posix()
+    return "/合规知识库/" + relative
+
+
+def pick_image_files(root: Path) -> dict:
+    """打开本机文件窗口，多选图片。只把合规知识库里面的路径交回页面。"""
+    if os.environ.get("COMPLIANCE_PICK") == "0":
+        return {"ok": True, "files": [], "outside": [], "cancelled": True}
+    chosen = _ask_image_files(root if root.is_dir() else Path.home())
+    if chosen is None:
+        return {"ok": False, "error": "没能打开文件选择窗口", "files": [], "outside": []}
+    files: list[str] = []
+    outside: list[str] = []
+    for item in chosen:
+        logical = to_library_path(root, Path(item))
+        if logical:
+            files.append(logical)
+        else:
+            outside.append(str(item))
+    return {"ok": True, "files": files, "outside": outside, "cancelled": False}
+
+
+def _ask_image_files(directory: Path) -> list[str] | None:
+    folder = str(directory)
+    try:
+        import webview
+
+        windows = list(getattr(webview, "windows", []) or [])
+        if windows:
+            picked = windows[0].create_file_dialog(
+                webview.OPEN_DIALOG,
+                directory=folder,
+                allow_multiple=True,
+                file_types=("Images (*.png;*.jpg;*.jpeg;*.gif;*.webp;*.bmp)",),
+            )
+            return [str(item) for item in (picked or [])]
+    except Exception:
+        pass
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+
+        host = tk.Tk()
+        host.withdraw()
+        try:
+            host.attributes("-topmost", True)
+        except tk.TclError:
+            pass
+        picked = filedialog.askopenfilenames(
+            initialdir=folder,
+            title="选择图片",
+            filetypes=[("图片", "*.png *.jpg *.jpeg *.gif *.webp *.bmp"), ("全部", "*.*")],
+        )
+        host.destroy()
+        return [str(item) for item in picked]
+    except Exception:
+        return None
 
 
 def library_map() -> dict:
