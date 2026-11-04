@@ -230,6 +230,24 @@ def render_report(groups: dict[str, list]) -> str:
             lines.append(f"- {item['url']}（{', '.join(item['entries'])}）：{item['new']['error']}")
         lines.append("")
     lines.append(f"未变化：{len(groups['unchanged'])} 个来源。")
+    if groups["changed"]:
+        updates = []
+        for item in groups["changed"]:
+            for entry_id in item["entries"]:
+                updates.append(
+                    {
+                        "requirement": entry_id,
+                        "source_url": item["url"],
+                        "detected_at": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                        "summary": "每周来源检查发现页面内容有变化",
+                    }
+                )
+        lines.append("")
+        lines.append("把下面的 JSON 导入工具首页，可把相关行标成「需要复核」：")
+        lines.append("")
+        lines.append("```json")
+        lines.append(json.dumps({"format": "compliance-tool-regulation-update-v1", "updates": updates}, ensure_ascii=False, indent=2))
+        lines.append("```")
     lines.append("")
     lines.append("审阅之后，在自己的电脑上更新基线并提交 `data/source-watch.json`：")
     lines.append("")

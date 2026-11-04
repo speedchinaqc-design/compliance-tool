@@ -9,6 +9,7 @@
   store.seedIfEmpty();
 
   function showList() {
+    window.__showHome = showList;
     var version = window.APP_VERSION || "";
     var versionNode = document.getElementById("app-version");
     if (versionNode) versionNode.textContent = version ? "v" + version : "";
@@ -68,7 +69,7 @@
     bar.append(create, sample, exp, imp, settings, update);
     page.append(bar);
     page.append(el("div", { id: "backup-banner" }));
-    loadBackupBanner();
+    window.ComplianceHome.renderSearch(page, data, projects);
     if (!projects.length) page.append(el("p", { class: "empty" }, ["还没有产品。可以新建，或按 UNI-8 样板开始。"]));
     projects.forEach(function (project) {
       var card = el("article", { class: "card", id: "project-" + project.id }, [
@@ -108,6 +109,7 @@
       page.append(card);
     });
     app.append(page);
+    loadBackupBanner();
   }
 
   function openWizard(id) {
@@ -157,6 +159,20 @@
     var host = document.getElementById("backup-banner");
     if (!host) return;
     fetch("/api/library").then(function (response) { return response.json(); }).then(function (info) {
+      info.unsortedCount = 0;
+      window.ComplianceHome.renderDashboard(document.getElementById("project-list"), store.load(), info);
+      var models = store.load().map(function (project) {
+        var raw = (project.archive && project.archive.basic && project.archive.basic.model) || project.name || "";
+        return raw.split("（")[0].trim();
+      }).filter(Boolean);
+      models.forEach(function (model) {
+        fetch("/api/files?model=" + encodeURIComponent(model)).then(function (response) { return response.json(); }).then(function (scan) {
+          var count = scan.other && scan.other["待分类"] && scan.other["待分类"].files ? scan.other["待分类"].files.length : 0;
+          if (!count) return;
+          info.unsortedCount = (info.unsortedCount || 0) + count;
+          window.ComplianceHome.renderDashboard(document.getElementById("project-list"), store.load(), info);
+        }).catch(function () {});
+      });
       var when = info.lastBackupAt;
       var old = true;
       if (when) {

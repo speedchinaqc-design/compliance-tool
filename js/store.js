@@ -501,6 +501,27 @@
     return { merged: merged, skipped: skipped };
   }
 
+  function applyRegulationUpdates(projects, fileObject) {
+    var updates = (fileObject && fileObject.updates) || [];
+    var count = 0;
+    updates.forEach(function (update) {
+      if (!update || !update.requirement) return;
+      var market = String(update.requirement).split("-")[0];
+      projects.forEach(function (project) {
+        if (project.markets && project.markets.length && project.markets.indexOf(market) === -1) return;
+        project.reviews = project.reviews || {};
+        project.reviews[update.requirement] = {
+          status: "需要复核",
+          summary: String(update.summary || "来源页有变化"),
+          at: String(update.detected_at || ""),
+          sourceUrl: String(update.source_url || ""),
+        };
+        count += 1;
+      });
+    });
+    return count;
+  }
+
   function auditPack(project, market, includeSensitive) {
     ensureArchive(project);
     function inMarket(ids) {
@@ -624,6 +645,7 @@
     importPayload: importPayload,
     mergeJudgments: mergeJudgments,
     mergeComparisons: mergeComparisons,
+    applyRegulationUpdates: applyRegulationUpdates,
     parseJudgmentText: parseJudgmentText,
     normalizeJudgment: normalizeJudgment,
     normalizeComparison: normalizeComparison,

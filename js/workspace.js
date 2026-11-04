@@ -111,6 +111,16 @@
       el("p", { class: "path" }, [row.folder]),
       root.CompliancePaths.buttons(row.folder),
     ]);
+    var review = project.reviews && project.reviews[entry.id];
+    if (review && review.status === "需要复核") {
+      var clear = el("button", { type: "button", class: "ghost" }, ["标记已复核"]);
+      clear.addEventListener("click", function () {
+        delete project.reviews[entry.id];
+        onChange(project);
+        if (root.__archiveRefresh) root.__archiveRefresh();
+      });
+      article.append(el("p", { class: "note" }, ["需要复核。" + (review.summary || "") + (review.sourceUrl ? " " + review.sourceUrl : "")]), clear);
+    }
     row.notes.forEach(function (note) { article.append(el("p", { class: "note" }, [note])); });
     if (entry.health_canada_reply) {
       var reply = entry.health_canada_reply;
