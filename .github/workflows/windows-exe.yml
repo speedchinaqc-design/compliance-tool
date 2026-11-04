@@ -21,7 +21,7 @@ jobs:
         run: pip install pyinstaller pywebview
       - name: Build exe
         run: |
-          pyinstaller --noconfirm --windowed --name 合规查询工具 --icon desktop/app.ico `
+          pyinstaller --noconfirm --onefile --windowed --name 合规查询工具 --icon desktop/app.ico `
             --add-data "index.html;." `
             --add-data "login.html;." `
             --add-data "VERSION;." `
@@ -34,11 +34,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: windows-exe
-          path: dist/合规查询工具.exe
+          path: dist/*.exe
       - name: Attach to GitHub release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/合规查询工具.exe
+          files: dist/*.exe
         env:
           GITHUB_TOKEN: ${{ github.token }}
