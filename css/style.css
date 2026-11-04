@@ -64,6 +64,70 @@ h1 {
 
 .product-note { margin-top: 6px; color: #f2d3cf; }
 
+.top-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+
+.top-button {
+  background: transparent;
+  color: #f6f3ec;
+  border: 1px solid rgba(246, 243, 236, 0.55);
+}
+
+.gate-body { min-height: 100vh; }
+
+.gate-wrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px 16px;
+}
+
+.gate {
+  width: min(440px, 100%);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 26px 22px 20px;
+  box-shadow: var(--shadow);
+}
+
+.gate .eyebrow { color: var(--accent); margin: 0 0 6px; letter-spacing: 0.12em; font-size: 12px; }
+
+.gate h1 { color: var(--ink); font-size: 28px; margin: 0 0 8px; }
+
+.gate p { margin: 0 0 10px; }
+
+.gate label { display: block; margin: 12px 0; font-weight: 650; }
+
+.gate input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 10px;
+  font: inherit;
+  border: 1px solid #cfc5b6;
+  background: white;
+  color: var(--ink);
+  font-weight: 400;
+}
+
+.gate button { width: 100%; margin-top: 8px; }
+
+.gate .warn {
+  background: #fff8e8;
+  border: 1px solid #ead7a4;
+  padding: 10px 12px;
+  color: #5c4314;
+}
+
+.gate .error { color: var(--stamp); min-height: 1.4em; margin-top: 8px; }
+
+.gate .command, .gate .login-url {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  background: #fff;
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  overflow-wrap: anywhere;
+}
+
 .banner {
   max-width: 1180px;
   margin: 16px auto 0;

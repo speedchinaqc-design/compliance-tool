@@ -1,10 +1,19 @@
 <!DOCTYPE html>
-<html lang="zh-Hans">
+<html lang="zh-Hans" class="auth-pending">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
   <title>合规查询 · 欧盟 / 加拿大 / 美国</title>
+  <style>html.auth-pending body { display: none; }</style>
+  <script src="js/auth.js"></script>
+  <script>
+    if (!window.ComplianceAuth || !ComplianceAuth.hasSession()) {
+      location.replace("login.html");
+    } else {
+      document.documentElement.classList.remove("auth-pending");
+    }
+  </script>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect fill='%23123c38' width='16' height='16'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -13,8 +22,12 @@
     <div class="top-inner">
       <p class="eyebrow">本地工具 · 第一期</p>
       <h1>合规查询</h1>
-      <p class="lede">给认证工程师自用的本地清单。第一期只有欧盟、加拿大、美国。不建账号，不上传数据，打开后不主动联网。</p>
+      <p class="lede">给认证工程师自用的本地清单。第一期只有欧盟、加拿大、美国。本机要先登录；用户名和密码哈希只留在这台浏览器里，不上传。</p>
       <div id="product-facts"></div>
+      <div class="top-actions no-print">
+        <button type="button" id="logout" class="top-button">退出</button>
+        <button type="button" id="reset-auth" class="top-button">重置本机密码</button>
+      </div>
     </div>
   </header>
   <div class="banner">
@@ -22,6 +35,18 @@
   </div>
   <main id="app"></main>
   <noscript><p>需要启用 JavaScript。数据已经在 js/data.js 里，不会向外部服务器发送。</p></noscript>
+  <script>
+    document.getElementById("logout").addEventListener("click", function () {
+      ComplianceAuth.logout();
+      location.replace("login.html");
+    });
+    document.getElementById("reset-auth").addEventListener("click", function () {
+      var ok = window.confirm("确定重置本机密码？\n\n这会清掉这台浏览器里为本工具保存的用户名、密码哈希，以及「已看过」标记。\n不会删除 YAML，也不会动 Dropbox。\n\n重置后需要重新设置用户名和密码。");
+      if (!ok) return;
+      ComplianceAuth.clearLocalData();
+      location.replace("login.html");
+    });
+  </script>
   <script src="js/xlsx.js"></script>
   <script src="js/logic.js"></script>
   <script src="js/data.js"></script>
